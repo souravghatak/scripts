@@ -27,7 +27,11 @@ base_branch()
         echo "Base branch :"
         read fBase < /dev/tty
     fi
-    validate $fBase && flag="valid" || flag="invalid" 
+    validate $fBase && flag="valid" || flag="invalid"
+    if [[ ${#fBase} -eq 0 ]]
+      then
+        flag="invalid"
+    fi
     if [ $flag = "valid" ]
       then
         git fetch &> /dev/null
@@ -46,12 +50,16 @@ new_branch()
         read fNew < /dev/tty
     fi
     validate $fNew && flag_new="valid" || flag_new="invalid"
+    if [[ ${#fNew} -eq 0 ]]
+      then
+        flag_new="valid"
+    fi
     if [ $flag_new = "invalid" ]
       then
         git checkout -b $fNew &> /dev/null
         git push origin $fNew &> /dev/null
     else
-        echo "Branch $fNew already exists. Please provide a different branch name and try again"
+        echo "Branch $fNew already exists or invalid branch name. Please provide a different branch name and try again"
         new_branch
     fi
 }
@@ -76,8 +84,10 @@ repo_clone()
 
 validate() 
 { 
-    all_branches=`git branch -r`
-    echo "$all_branches" | grep -F -q -w "$1"; 
+    git branch -r > $cur_dir/branches.txt
+    awk '{gsub(/origin\//," ")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
+    all_branches=`sed -e "/HEAD/d" $cur_dir/branches1.txt`
+    echo $all_branches | grep -F -q -w "$1";
 }
 
 echo "Do you want to create a new branch? (Y/N)"
@@ -95,7 +105,8 @@ if [[ $fResp = "Y" ]]
     fi
     echo $dir_repo, $fBase, $fNew > excel_convert
     paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
-    echo "New branch : $fNew created successfully baselined to : $fBase branch"
+    rm $cur_dir/branches.txt $cur_dir/branches1.txt
+    echo "New branch : $fNew created successfully and baselined to : $fBase branch"
 elif [[ $fResp = "N" ]]
   then
     echo "Thank you! Have a nice day"
