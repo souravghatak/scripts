@@ -1,10 +1,11 @@
 #!/bin/sh
-#set -e
+
 awk '{if(NR>1)print}' create.conf > temp_create.conf
 cur_dir="$PWD"
 while IFS="|"  read -r fDir fBase fNew fURL ;
 do
 dir_repo=""
+
 repo_dir()
 {
     if [[ $fDir = "" ]] || [[ $flag_dir == "invalid" ]]
@@ -43,26 +44,31 @@ base_branch()
     fi
 }
 
-new_branch()
+merge_branch()
 {
-    if [[ $fNew = "" ]] || [[ $flag_new = "valid" ]]
+    if [[ $fNew = "" ]] || [[ $flag_new = "invalid" ]]
       then
-        echo "New branch :"
+        echo "Merge Branch :"
         read fNew < /dev/tty
     fi
     validate $fNew && flag_new="valid" || flag_new="invalid"
     if [[ ${#fNew} -eq 0 ]]
       then
-        flag_new="valid"
+        flag_new="invalid"
     fi
-    if [ $flag_new = "invalid" ]
+    if [ $flag_new = "valid" ]
       then
-        git checkout -b $fNew &> /dev/null
-        git push origin $fNew &> /dev/null
+        git checkout $fNew &> /dev/null
+        git pull origin $fNew &> /dev/null
     else
-        echo "Branch $fNew already exists or invalid branch name. Please provide a different branch name and try again"
-        new_branch
+        echo "Invalid branch name. Please try again"
+        merge_branch
     fi
+}
+
+merge()
+{
+    git merge $fNew
 }
 
 repo_clone()
@@ -73,7 +79,7 @@ repo_clone()
         read fURL < /dev/tty
     fi
 
-    git clone $fURL &> /dev/null 
+    git clone $fURL &> /dev/null
     dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
     cd $dir_repo && flag_repo="valid" || flag_repo="invalid"
     if [ $flag_repo == "invalid" ]
@@ -83,31 +89,24 @@ repo_clone()
     fi
 }
 
-validate() 
-{ 
+validate()
+{
     git branch -r > $cur_dir/branches.txt
     awk '{gsub(/origin\//," ")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
     all_branches=`sed -e "/HEAD/d" $cur_dir/branches1.txt`
     echo $all_branches | grep -F -q -w "$1";
 }
 
-echo "Do you want to create a new branch? (Y/N)"
+echo "Do you want to do git merging? (Y/N)"
 read fResp < /dev/tty
 if [[ $fResp = "Y" ]]
   then
     repo_dir
     repo_clone
+    merge_branch
     base_branch
-    new_branch
-    if [ ! -f $cur_dir/${dir_repo}_tracker.csv ]
-      then
-        echo "Repository name","Base Branch","New Branch" > excel_header
-        paste -sd, excel_header >> $cur_dir/${dir_repo}_tracker.csv && rm excel_header
-    fi
-    echo $dir_repo, $fBase, $fNew > excel_convert
-    paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
+    merge
     rm $cur_dir/branches.txt $cur_dir/branches1.txt
-    echo "New branch : $fNew created successfully and baselined to : $fBase branch"
 elif [[ $fResp = "N" ]]
   then
     echo "Thank you! Have a nice day"
@@ -117,3 +116,4 @@ else
 fi
 done < temp_create.conf
 rm $cur_dir/temp_create.conf
+
