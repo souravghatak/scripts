@@ -1,7 +1,7 @@
 #!/bin/sh
 
 awk '{if(NR>1)print}' create.conf > temp_create.conf
-cur_dir="$PWD"
+cur_dir=`pwd`
 while IFS="|"  read -r fDir fBase fNew fURL ;
 do
 dir_repo=""
@@ -68,7 +68,60 @@ merge_branch()
 
 merge()
 {
-    git merge $fNew
+    merge_var=$(git merge $fNew --no-commit --no-ff; git merge --abort 2>&1) 
+    if [[ $merge_var == *"CONFLICT"* ]]
+      then
+        echo "There are merge conflicts. Do you want to continue merging? (Y/N)"
+        read fConf < /dev/tty
+        if [[ $fConf = "Y" ]]
+          then
+            git merge $fNew &> /dev/null
+            echo "Resolve the conflicts and try again"
+        elif [[ $fConf = "N" ]]
+          then
+            git diff $fNew >> $cur_dir/${fBase}_diff_${fNew}.txt
+            echo "Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
+        else
+            echo "Wrong input! Please try again"
+            merge
+        fi
+    elif [[ $merge_var == *"There is no merge to abort"* ]]
+      then
+        git_diff=$(git diff $fNew)
+        if [[ ${#git_diff} -eq 0 ]]
+          then
+            echo "There is nothing to merge and no difference between branch $fBase and $fNew"
+        else
+            echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
+            printf "Please re-baseline $fNew branch. $fBase branch is ahead of $fNew branch!\nPlease consult ${fBase}_diff_${fNew}.txt file.\n"
+        fi
+    else
+        printf "Do you want to continue with automerging and code push to remote repository? (Y/N)"
+        read fMerge < /dev/tty
+        if [[ $fMerge = "Y" ]]
+          then
+            git merge $fNew &> /dev/null
+            code_push
+        elif [[ $fMerge = "N" ]]
+          then
+            echo "Auto-merging stopped before committing as requested!"
+        else
+            echo "Wrong input! Please try again"
+            merge
+        fi
+     fi
+}
+
+code_push()
+{
+    git push origin $fBase &> /dev/null && flag_merge="success" || flag_merge="failed"
+    if [[ $flag_merge = "success" ]]
+      then
+        echo "Code merge success! $fNew branch is merged to $fBase branch and pushed to remote repository"
+    else
+        echo "Code push failed! Please try again"
+        code_push
+    fi
 }
 
 repo_clone()
@@ -79,7 +132,7 @@ repo_clone()
         read fURL < /dev/tty
     fi
 
-    git clone $fURL &> /dev/null
+    git clone $fURL &> /dev/null 
     dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
     cd $dir_repo && flag_repo="valid" || flag_repo="invalid"
     if [ $flag_repo == "invalid" ]
@@ -112,7 +165,7 @@ elif [[ $fResp = "N" ]]
     echo "Thank you! Have a nice day"
 else
     echo "Wrong input"
-    ./git_create.sh
+    ./git_merge.sh
 fi
 done < temp_create.conf
 rm $cur_dir/temp_create.conf
