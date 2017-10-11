@@ -13,7 +13,7 @@ repo_dir()
         echo "Provide directory to clone the repo"
         read fDir < /dev/tty
     fi
-    cd $fDir && flag_dir="valid" || flag_dir="invalid"
+    cd $fDir 2> /dev/null && flag_dir="valid" || flag_dir="invalid"  
     if [ $flag_dir == "invalid" ]
       then
         echo "Invalid directory! Please try again"
@@ -131,10 +131,21 @@ repo_clone()
         echo "Repo URL :"
         read fURL < /dev/tty
     fi
-
-    git clone $fURL &> /dev/null 
+    if [[ ${#fURL} -eq 0 ]]
+      then
+        flag_repo="invalid"
+        echo "Invalid URL! Please try again"
+        repo_clone
+    fi
+ 
+    git clone $fURL &> /dev/null #&& flag_clone="success" || flag_clone="failed"
+    #if [[ $flag_clone == "failed" ]]
+    #  then
+    #    echo "Invalid URL! Please try again"
+    #    repo_clone
+    #fi
     dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
-    cd $dir_repo && flag_repo="valid" || flag_repo="invalid"
+    cd $dir_repo &> /dev/null && flag_repo="valid" || flag_repo="invalid"
     if [ $flag_repo == "invalid" ]
       then
         echo "Invalid URL! Please try again"
@@ -159,7 +170,7 @@ if [[ $fResp = "Y" ]]
     merge_branch
     base_branch
     merge
-    rm $cur_dir/branches.txt $cur_dir/branches1.txt
+    rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
 elif [[ $fResp = "N" ]]
   then
     echo "Thank you! Have a nice day"
@@ -168,5 +179,5 @@ else
     ./git_merge.sh
 fi
 done < temp_create.conf
-rm $cur_dir/temp_create.conf
+rm $cur_dir/temp_create.conf &> /dev/null
 
