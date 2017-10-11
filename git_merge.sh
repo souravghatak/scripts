@@ -10,8 +10,14 @@ repo_dir()
 {
     if [[ $fDir = "" ]] || [[ $flag_dir == "invalid" ]]
       then
-        echo "Provide directory to clone the repo"
+        echo "Codebase directory :"
         read fDir < /dev/tty
+    fi
+    if [[ ${#fDir} -eq 0 ]]
+      then
+        flag_dir="invalid"
+        echo "Invalid directory! Please try again"
+        repo_dir
     fi
     cd $fDir 2> /dev/null && flag_dir="valid" || flag_dir="invalid"  
     if [ $flag_dir == "invalid" ]
@@ -79,6 +85,7 @@ merge()
             echo "Resolve the conflicts and try again"
         elif [[ $fConf = "N" ]]
           then
+            rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
             git diff $fNew >> $cur_dir/${fBase}_diff_${fNew}.txt
             echo "Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
         else
@@ -92,8 +99,9 @@ merge()
           then
             echo "There is nothing to merge and no difference between branch $fBase and $fNew"
         else
+            rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
             echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
-            printf "Please re-baseline $fNew branch. $fBase branch is ahead of $fNew branch!\nPlease consult ${fBase}_diff_${fNew}.txt file.\n"
+            printf "Please re-baseline $fNew branch. $fBase branch is ahead of $fNew branch!\nPlease consult $cur_dir/${fBase}_diff_${fNew}.txt file.\n"
         fi
     else
         printf "Do you want to continue with automerging and code push to remote repository? (Y/N)"
@@ -138,12 +146,7 @@ repo_clone()
         repo_clone
     fi
  
-    git clone $fURL &> /dev/null #&& flag_clone="success" || flag_clone="failed"
-    #if [[ $flag_clone == "failed" ]]
-    #  then
-    #    echo "Invalid URL! Please try again"
-    #    repo_clone
-    #fi
+    git clone $fURL &> /dev/null 
     dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
     cd $dir_repo &> /dev/null && flag_repo="valid" || flag_repo="invalid"
     if [ $flag_repo == "invalid" ]

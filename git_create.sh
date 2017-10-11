@@ -11,7 +11,7 @@ repo_dir()
 {
     if [[ $fDir = "" ]] || [[ $flag_dir == "invalid" ]]
       then
-        echo "Provide directory to clone the repo"
+        echo "Codebase directory : "
         read fDir < /dev/tty
     fi
     if [[ ${#fDir} -eq 0 ]]
