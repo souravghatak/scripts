@@ -2,7 +2,10 @@
 
 awk '{if(NR>1)print}' push.conf > temp_push.conf
 cur_dir=`pwd`
-
+module_list=""
+deleted_files=""
+modified_files=""
+added_files=""
 while IFS="|"  read -r fDir fBase ;
 do
 
@@ -55,6 +58,7 @@ list_of_files()
             printf "\nAdded:\n$added_files\n"
         fi
     fi
+    module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
 }
 
 git_add()
@@ -63,12 +67,12 @@ git_add()
     read fFile < /dev/tty
     if [[ $fFile = "Y" ]]
       then
-        git add --all
+        git add $module_list &> /dev/null
     elif [[ $fFile = "N" ]]
       then
         echo "Please specify the file names below (space separated)"
-        read fModules < /dev/tty
-        git add $fModules &> /dev/null
+        read module_list < /dev/tty
+        git add $module_list &> /dev/null
     else
         echo "Wrong input! Please try again"
         git_add
@@ -81,6 +85,7 @@ git_commit()
     read fCommit < /dev/tty
     if [[ ${#fCommit} -eq 0 ]]
       then
+        echo "Commit message cannot be empty! Please try again."
         git_commit
     fi
     git commit -m "$fCommit" &> /dev/null
@@ -110,9 +115,23 @@ git_push()
     if [[ $flag_push = "success" ]]
       then
         echo "Changes pushed to remote $branch branch!"
+        if (( $(grep -c . <<<"$module_list") > 1 )); then
+            fModules=`echo ${module_list} | awk -v RS="" '{gsub (/\n/," ")}1'`
+        else 
+            fModules=`echo ${module_list}`
+        fi
+        
+        commit=`git rev-parse --verify $branch`
+        remote_del=`git show --name-status --oneline HEAD | awk 'match($1, "D"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        remote_mod=`git show --name-status --oneline HEAD | awk 'match($1, "M"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        remote_add=`git show --name-status --oneline HEAD | awk 'match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+
+        `awk -v var1=$branch -v var2=" $remote_del" -v var3=" $remote_mod" -v var4=" $remote_add" -v var5=$commit 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Commit Id : " var5 " - Deleted : " var2 " Modified : " var3 " Added : " var4};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
+        mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
+        
     else
         echo "Wrong git credentials! Code push failed! Please try again"
-        git_push
+        git_push $branch
     fi
 }
 repo_dir
