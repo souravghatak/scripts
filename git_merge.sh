@@ -39,6 +39,36 @@ base_branch()
       then
         flag="invalid"
     fi
+    rebase_branch=`awk -v var1=$fNew 'BEGIN {FS = ", "}; {if ($3 == var1) {print $2}}' $cur_dir/research_tracker.csv`
+    if [[ $fBase == $rebase_branch ]]
+      then
+        flag="valid"
+    else
+        echo "Branch $fNew is created baselined to $rebase_branch . Hence ideally branch $fNew should be merged to $rebase_branch . Do you still want to merge branch $fNew to branch $fBase? (Y/N)"
+        read fBaseMerge < /dev/tty
+        if [[ $fBaseMerge = "Y" ]]
+          then
+            flag="valid"
+        elif [[ $fBaseMerge = "N" ]]
+          then
+            echo "Do you want to merge branch $fNew to $rebase_branch ? (Y/N)"
+            read fRebaseMerge < /dev/tty
+            if [[ $fRebaseMerge == "Y" ]]
+              then
+                fBase=$rebase_branch
+                validate $fBase && flag="valid" || flag="invalid"
+            elif [[ $fRebaseMerge == "N" ]]
+              then
+                flag="invalid"
+            else
+                echo "Wrong input! Please try again"
+                base_branch
+            fi
+        else
+            echo "Wrong input! Please try again"
+            base_branch
+        fi
+    fi
     if [ $flag = "valid" ]
       then
         git fetch &> /dev/null
@@ -126,6 +156,7 @@ code_push()
     if [[ $flag_merge = "success" ]]
       then
         echo "Code merge success! $fNew branch is merged to $fBase branch and pushed to remote repository"
+        tracker_update $fBase
     else
         echo "Code push failed! Please try again"
         code_push
@@ -162,6 +193,33 @@ validate()
     awk '{gsub(/origin\//," ")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
     all_branches=`sed -e "/HEAD/d" $cur_dir/branches1.txt`
     echo $all_branches | grep -F -q -w "$1";
+}
+
+tracker_update ()
+{
+    branch=`echo $1`
+    commit=`git rev-parse --verify $branch`
+    remote_del=`git show --name-status --oneline HEAD | awk 'match($1, "D"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    remote_mod=`git show --name-status --oneline HEAD | awk 'match($1, "M"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    remote_add=`git show --name-status --oneline HEAD | awk 'match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+
+    `awk -v var1=$branch -v var2=" $remote_del" -v var3=" $remote_mod" -v var4=" $remote_add" -v var5=$commit 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Commit Id : " var5 " - Deleted : " var2 " Modified : " var3 " Added : " var4};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
+    mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
+    rebase_email $branch
+}
+
+rebase_email ()
+{
+        branch=`echo $1`
+        rebase_user=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $4}}' $cur_dir/research_tracker.csv`
+        rebase_email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $5}}' $cur_dir/research_tracker.csv`
+        rebase_branch=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $3}}' $cur_dir/research_tracker.csv`
+        username=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if (var1 == "master" && $3 == var2) {print $4}}' $cur_dir/research_tracker.csv`
+        email=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if (var1 == "master" && $3 == var2) {print $5}}' $cur_dir/research_tracker.csv`
+        if [[ $rebase_user != "" ]] && [[ $rebase_email != "" ]] && [[ $rebase_branch != "" ]]
+          then
+            echo -e "Hi $rebase_user,\n\n\nBranch $rebase_branch created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit . \nPlease rebaseline your $rebase_branch branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+        fi
 }
 
 echo "Do you want to do git merging? (Y/N)"

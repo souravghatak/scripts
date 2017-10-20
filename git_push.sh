@@ -112,12 +112,6 @@ git_push()
     if [[ $flag_push = "success" ]]
       then
         echo "Changes pushed to remote $branch branch!"
-        #tracker_update $branch
-        #if (( $(grep -c . <<<"$module_list") > 1 )); then
-        #    fModules=`echo ${module_list} | awk -v RS="" '{gsub (/\n/," ")}1'`
-        #else 
-        #    fModules=`echo ${module_list}`
-        #fi
     else
         echo "Wrong git credentials! Code push failed! Please try again"
         git_push $branch
@@ -144,7 +138,7 @@ rebase_email ()
         email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $5}}' $cur_dir/research_tracker.csv`
         if [[ $rebase_user != "" ]] && [[ $rebase_email != "" ]] && [[ $rebase_branch != "" ]]
           then
-            echo "Hi $rebase_user ,Branch $rebase_branch created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit . Please rebaseline your $rebase_branch branch to $branch branch."
+            echo -e "Hi $rebase_user,\n\n\nBranch $rebase_branch created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit . \nPlease rebaseline your $rebase_branch branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
         fi
 }
 
