@@ -5,6 +5,7 @@ cur_dir=`pwd`
 while IFS="|"  read -r fDir fBase fNew fURL ;
 do
 dir_repo=""
+flag=""
 
 repo_dir()
 {
@@ -39,6 +40,37 @@ base_branch()
       then
         flag="invalid"
     fi
+    if [[ $fBase != "master" ]]
+      then
+        flag="valid"
+    else
+        echo "You are about to merge $fNew to branch master branch. Please confirm the changes made as part of $fNew branch is in production. (Y/N)"
+        read fMaster < /dev/tty
+        if [[ $fMaster = "Y" ]]
+          then
+            flag="valid"
+        elif [[ $fMaster = "N" ]]
+          then
+            flag="invalid"
+        else
+            echo "Wrong input! Please try again"
+            base_branch
+        fi
+    fi        
+    if [ $flag = "valid" ]
+      then
+        git fetch &> /dev/null
+        git checkout $fBase &> /dev/null
+        git pull origin $fBase &> /dev/null
+    else
+        echo "Invalid base branch. Please try again!"
+        base_branch
+    fi
+}
+
+#dormant function - not in use
+rebase_branch ()
+{
     rebase_branch=`awk -v var1=$fNew 'BEGIN {FS = ", "}; {if ($3 == var1) {print $2}}' $cur_dir/research_tracker.csv`
     if [[ $fBase == $rebase_branch ]]
       then
@@ -49,6 +81,9 @@ base_branch()
         if [[ $fBaseMerge = "Y" ]]
           then
             flag="valid"
+            username=`awk -v var1=$rebase_branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $4}}' $cur_dir/research_tracker.csv`
+            email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $5}}' $cur_dir/research_tracker.csv`
+
         elif [[ $fBaseMerge = "N" ]]
           then
             echo "Do you want to merge branch $fNew to $rebase_branch ? (Y/N)"
@@ -68,15 +103,6 @@ base_branch()
             echo "Wrong input! Please try again"
             base_branch
         fi
-    fi
-    if [ $flag = "valid" ]
-      then
-        git fetch &> /dev/null
-        git checkout $fBase &> /dev/null
-        git pull origin $fBase &> /dev/null
-    else
-        echo "Invalid base branch. Please try again!"
-        base_branch
     fi
 }
 
@@ -156,7 +182,13 @@ code_push()
     if [[ $flag_merge = "success" ]]
       then
         echo "Code merge success! $fNew branch is merged to $fBase branch and pushed to remote repository"
-        tracker_update $fBase
+        if [[ $fBase != "master" ]]
+          then
+             rebase_email $fBase
+        else
+            `awk -v var1=$fNew 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$7 = "In-Production"};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
+             mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
+        fi
     else
         echo "Code push failed! Please try again"
         code_push
@@ -195,9 +227,11 @@ validate()
     echo $all_branches | grep -F -q -w "$1";
 }
 
+#dormant function - not in use
 tracker_update ()
 {
     branch=`echo $1`
+
     commit=`git rev-parse --verify $branch`
     remote_del=`git show --name-status --oneline HEAD | awk 'match($1, "D"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     remote_mod=`git show --name-status --oneline HEAD | awk 'match($1, "M"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
@@ -205,21 +239,22 @@ tracker_update ()
 
     `awk -v var1=$branch -v var2=" $remote_del" -v var3=" $remote_mod" -v var4=" $remote_add" -v var5=$commit 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Commit Id : " var5 " - Deleted : " var2 " Modified : " var3 " Added : " var4};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
     mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
-    rebase_email $branch
 }
 
 rebase_email ()
 {
-        branch=`echo $1`
-        rebase_user=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $4}}' $cur_dir/research_tracker.csv`
-        rebase_email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $5}}' $cur_dir/research_tracker.csv`
-        rebase_branch=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $3}}' $cur_dir/research_tracker.csv`
-        username=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if (var1 == "master" && $3 == var2) {print $4}}' $cur_dir/research_tracker.csv`
-        email=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if (var1 == "master" && $3 == var2) {print $5}}' $cur_dir/research_tracker.csv`
-        if [[ $rebase_user != "" ]] && [[ $rebase_email != "" ]] && [[ $rebase_branch != "" ]]
-          then
-            echo -e "Hi $rebase_user,\n\n\nBranch $rebase_branch created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit . \nPlease rebaseline your $rebase_branch branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
-        fi
+    branch=`echo $1`
+
+    rebase_user=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $4}}' $cur_dir/research_tracker.csv`
+    rebase_email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $5}}' $cur_dir/research_tracker.csv`
+    rebase_branch=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $3}}' $cur_dir/research_tracker.csv`
+    username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $4}}' $cur_dir/research_tracker.csv`
+    email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $5}}' $cur_dir/research_tracker.csv`
+        
+    if [[ $rebase_user != "" ]] && [[ $rebase_email != "" ]] && [[ $rebase_branch != "" ]]
+      then
+        echo -e "Hi $rebase_user,\n\n\nBranch $rebase_branch created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit . \nPlease rebaseline your $rebase_branch branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+    fi
 }
 
 echo "Do you want to do git merging? (Y/N)"

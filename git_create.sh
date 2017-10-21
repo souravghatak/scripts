@@ -127,7 +127,7 @@ if [[ $fResp = "Y" ]]
     code_push
     if [ ! -f $cur_dir/${dir_repo}_tracker.csv ]
       then
-        echo "Repository name","Base Branch","New Branch","Username","Email_address","Commit Id & Changed files" > excel_header
+        echo "Repository name","Base Branch","New Branch","Username","Email address","Commit Id & Changed files, Status, System Owner, System Owner's Email address" > excel_header
         paste -sd, excel_header >> $cur_dir/${dir_repo}_tracker.csv && rm excel_header
     fi
     echo $dir_repo, $fBase, $fNew, $username, $email > excel_convert
