@@ -182,11 +182,20 @@ code_push()
     if [[ $flag_merge = "success" ]]
       then
         echo "Code merge success! $fNew branch is merged to $fBase branch and pushed to remote repository"
+        updated_email=`git config user.email`
+        updated_username=`git config user.name`
+        
         if [[ $fBase != "master" ]]
           then
-             rebase_email $fBase
+            `awk -v var1=$fBase -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
+            mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
+ 
+            rebase_email $fBase
         else
-            `awk -v var1=$fNew 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$7 = "In-Production"};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
+            updated_email=`git config user.email`
+            updated_username=`git config user.name`
+
+            `awk -v var1=$fNew -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$7 = "In-Production"; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
              mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
         fi
     else
@@ -244,11 +253,14 @@ tracker_update ()
 rebase_email ()
 {
     branch=`echo $1`
-    rebase_user=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    rebase_email_id=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    rebase_branch=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    commit=`git rev-parse --verify $branch`
+    rebase_user=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    rebase_email_id=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    rebase_branch=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $10}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $11}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    date=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $12}}' $cur_dir/research_tracker.csv`
+
     if [[ $rebase_user != "" ]] && [[ $rebase_email_id != "" ]] && [[ $rebase_branch != "" ]]
       then
         array1=(${rebase_user// / })
@@ -257,7 +269,7 @@ rebase_email ()
         length=${#array1[@]}
 
         for ((i=0;i<=$length-1;i++)); do
-            echo -e "Hi ${array1[$i]},\n\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit . \nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+            echo -e "Hi ${array1[$i]},\n\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date . \nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
         done
     fi
 }

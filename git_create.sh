@@ -127,10 +127,11 @@ if [[ $fResp = "Y" ]]
     code_push
     if [ ! -f $cur_dir/${dir_repo}_tracker.csv ]
       then
-        echo "Repository name","Base Branch","New Branch","Username","Email address","Commit Id & Changed files, Status, System Owner, System Owner's Email address" > excel_header
+        echo "Repository name","Base Branch","New Branch","Created By","Branch Owner's Email address","Commit Id & Changed files, Status", "System Owner", "System Owner's Email address", "Last Updated By", "Last Updated Email address", "Last Updated time" > excel_header
         paste -sd, excel_header >> $cur_dir/${dir_repo}_tracker.csv && rm excel_header
     fi
-    echo $dir_repo, $fBase, $fNew, $username, $email, , "Active", $fOwner, $fOwner_email > excel_convert
+    date=`date "+%Y-%m-%d %H:%M:%S"`
+    echo $dir_repo, $fBase, $fNew, $username, $email, , "Active", $fOwner, $fOwner_email, $username, $email, $date > excel_convert
     paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
     echo "New branch : $fNew created successfully and baselined to : $fBase branch"
