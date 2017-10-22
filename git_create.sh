@@ -4,7 +4,7 @@ awk '{if(NR>1)print}' create.conf > temp_create.conf
 cur_dir="$PWD"
 email=`git config user.email`
 username=`git config user.name`
-while IFS="|"  read -r fDir fBase fNew fURL ;
+while IFS="|"  read -r fDir fBase fNew fURL fOwner fOwner_email;
 do
 dir_repo=""
 repo_dir()
@@ -130,7 +130,7 @@ if [[ $fResp = "Y" ]]
         echo "Repository name","Base Branch","New Branch","Username","Email address","Commit Id & Changed files, Status, System Owner, System Owner's Email address" > excel_header
         paste -sd, excel_header >> $cur_dir/${dir_repo}_tracker.csv && rm excel_header
     fi
-    echo $dir_repo, $fBase, $fNew, $username, $email > excel_convert
+    echo $dir_repo, $fBase, $fNew, $username, $email, , "Active", $fOwner, $fOwner_email > excel_convert
     paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
     echo "New branch : $fNew created successfully and baselined to : $fBase branch"

@@ -1,12 +1,12 @@
 #!/bin/sh
 
-awk '{if(NR>1)print}' create.conf > temp_create.conf
+awk '{if(NR>1)print}' merge.conf > temp_merge.conf
 cur_dir=`pwd`
 while IFS="|"  read -r fDir fBase fNew fURL ;
 do
 dir_repo=""
 flag=""
-
+echo $fURL
 repo_dir()
 {
     if [[ $fDir = "" ]] || [[ $flag_dir == "invalid" ]]
@@ -244,16 +244,21 @@ tracker_update ()
 rebase_email ()
 {
     branch=`echo $1`
-
-    rebase_user=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $4}}' $cur_dir/research_tracker.csv`
-    rebase_email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $5}}' $cur_dir/research_tracker.csv`
-    rebase_branch=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $3}}' $cur_dir/research_tracker.csv`
-    username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $4}}' $cur_dir/research_tracker.csv`
-    email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $5}}' $cur_dir/research_tracker.csv`
-        
-    if [[ $rebase_user != "" ]] && [[ $rebase_email != "" ]] && [[ $rebase_branch != "" ]]
+    rebase_user=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    rebase_email_id=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    rebase_branch=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    if [[ $rebase_user != "" ]] && [[ $rebase_email_id != "" ]] && [[ $rebase_branch != "" ]]
       then
-        echo -e "Hi $rebase_user,\n\n\nBranch $rebase_branch created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit . \nPlease rebaseline your $rebase_branch branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+        array1=(${rebase_user// / })
+        array2=(${rebase_email_id// / })
+        array3=(${rebase_branch// / })
+        length=${#array1[@]}
+
+        for ((i=0;i<=$length-1;i++)); do
+            echo -e "Hi ${array1[$i]},\n\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit . \nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+        done
     fi
 }
 
@@ -274,6 +279,5 @@ else
     echo "Wrong input"
     ./git_merge.sh
 fi
-done < temp_create.conf
-rm $cur_dir/temp_create.conf &> /dev/null
-
+done < temp_merge.conf
+rm $cur_dir/temp_merge.conf &> /dev/null
