@@ -61,9 +61,14 @@ list_of_files()
 git_add()
 {
     fBranch=`git rev-parse --abbrev-ref HEAD`
+    fProd_branch=`awk 'BEGIN {FS = ", "}; {if ($7 == "In-Production") {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
     if [[ $fBranch = "master" ]]
       then
-        echo "Sorry! You cannot push changes directly to master branch"
+        echo "Sorry! You cannot push changes directly to $fBranch branch. Only other branches can be merged to $fBranch branch."
+        exit
+    elif [[ $fBranch = $fProd_branch ]]
+      then
+        echo "Sorry! You cannot push any more changes to $fBranch branch. This branch is already in production and no more changes to this branch will be acknowledged."
         exit
     fi
     echo "Do you want to push all the above files? (Y/N)"
