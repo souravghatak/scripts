@@ -5,7 +5,7 @@ cur_dir=`pwd`
 module_list=""
 branch=""
 
-while IFS="|"  read -r fDir ;
+while IFS="|"  read -r fDir fNew ;
 do
 
 repo_dir()
@@ -32,13 +32,47 @@ repo_dir()
 
 list_of_files()
 {
-    deleted_files=`git status --porcelain | awk 'match($1, "D"){print $2}'`
-    modified_files=`git status --porcelain | awk 'match($1, "M"){print $2}'`
-    added_files=`git status --porcelain | awk 'match($1, "?"){print $2}'`
+    status=$(git status)
+    fBranch=`git rev-parse --abbrev-ref HEAD`
+    if [[ $status == *"You have unmerged paths."* ]]
+      then
+        if [[ $fNew = "" ]]
+          then
+            echo "Merge branch :"
+            read fNew < /dev/tty
+        fi
+        if [[ ${#fNew} -eq 0 ]]
+          then
+            echo "Invalid merge branch! Please try again"
+            list_of_files
+        fi
+
+        echo "Please confirm if merge conflicts recorded for merging $fNew branch to $fBranch branch are manually resolved? (Y/N)"
+        read fConflict < /dev/tty
+        if [[ $fConflict = "Y" ]]
+          then
+            echo "Merging $fNew branch to $fBranch branch..."
+            flag_merge="true"
+        elif [[ $fConflict = "N" ]]
+          then
+            echo "Resolve the conflicts manually and try git push"
+            rm $cur_dir/temp_push.conf &> /dev/null
+            exit
+        else
+            echo "Wrong input! Please try again"
+            list_of_files
+        fi
+
+    fi
+
+    deleted_files=`git status --porcelain | awk 'match($1, "D") || match($1, "UD"){print $2}'`
+    modified_files=`git status --porcelain | awk 'match($1, "M") || match($1, "UU"){print $2}'`
+    added_files=`git status --porcelain | awk 'match($1, "?") || match($1, "A"){print $2}'`
     
     if [[ $deleted_files = "" ]] && [[ $modified_files = "" ]] && [[ $added_files = "" ]]
       then
         echo "No files changed to commit. Thank you"
+        rm $cur_dir/temp_push.conf &> /dev/null
         exit
     else 
         echo "Please find the list of files (Deleted/Modified/Added)"
@@ -55,7 +89,7 @@ list_of_files()
             printf "\nAdded:\n$added_files\n"
         fi
     fi
-    module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
+    module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}" #$'\n'"${both_modified}"
 }
 
 git_add()
@@ -65,10 +99,12 @@ git_add()
     if [[ $fBranch = "master" ]]
       then
         echo "Sorry! You cannot push changes directly to $fBranch branch. Only other branches can be merged to $fBranch branch."
+        rm $cur_dir/temp_push.conf &> /dev/null
         exit
     elif [[ $fBranch = $fProd_branch ]]
       then
         echo "Sorry! You cannot push any more changes to $fBranch branch. This branch is already in production and no more changes to this branch will be acknowledged."
+        rm $cur_dir/temp_push.conf &> /dev/null
         exit
     fi
     echo "Do you want to push all the above files? (Y/N)"
@@ -132,21 +168,27 @@ git_push()
 tracker_update ()
 {       
     commit=`git rev-parse --verify $branch`
-    remote_del=`git show --name-status --oneline HEAD | awk 'match($1, "D"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    remote_mod=`git show --name-status --oneline HEAD | awk 'match($1, "M"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    remote_add=`git show --name-status --oneline HEAD | awk 'match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    remote_del=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "D"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    remote_mod=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "M"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    remote_add=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     updated_email=`git config user.email`
     updated_username=`git config user.name`
-
-    `awk -v var1=$branch -v var2=" $remote_del" -v var3=" $remote_mod" -v var4=" $remote_add" -v var5=$commit -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Commit Id : " var5 " - Deleted : " var2 " Modified : " var3 " Added : " var4; $7 = "Active"; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
-    mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
+    
+    if [[ $flag_merge = "true" ]]
+      then
+        `awk -v var1=$branch -v var2=" $remote_del" -v var3=" $remote_mod" -v var4=" $remote_add" -v var5=$commit -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" -v var9=$fNew 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Merge Commit (" var9 " -> " var1 ") - Id: " var5 " - Deleted : " var2 " Modified : " var3 " Added : " var4; $7 = "Active"; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
+        mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
+    else
+        `awk -v var1=$branch -v var2=" $remote_del" -v var3=" $remote_mod" -v var4=" $remote_add" -v var5=$commit -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Commit Id : " var5 " - Deleted : " var2 " Modified : " var3 " Added : " var4; $7 = "Active"; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
+        mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
+    fi
 }
 
 rebase_email ()
 {        
-        rebase_user=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-        rebase_email_id=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-        rebase_branch=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+        rebase_user=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+        rebase_email_id=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+        rebase_branch=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
         username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $10}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
         email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $11}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
         date=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $12}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/" "/,"")}1'`
@@ -158,7 +200,7 @@ rebase_email ()
             length=${#array1[@]}
             
             for ((i=0;i<=$length-1;i++)); do
-                echo -e "Hi ${array1[$i]},\n\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date . \nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+                echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date . \nThe list of changed files is as below: \n\nDeleted: $remote_del \nModified: $remote_mod \nAdded: $remote_add \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
             done
         fi
 }
