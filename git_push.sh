@@ -30,28 +30,28 @@ repo_dir()
     fi
 }
 
-list_of_files()
+merge_branch()
 {
-    status=$(git status)
-    fBranch=`git rev-parse --abbrev-ref HEAD`
-    if [[ $status == *"You have unmerged paths."* ]]
-      then
-        if [[ $fNew = "" ]]
+    if [[ $fNew = "" ]] || [[ $flag_new = "invalid" ]]
           then
             echo "Merge branch :"
             read fNew < /dev/tty
         fi
-        if [[ ${#fNew} -eq 0 ]]
+    validate $fNew && flag_new="valid" || flag_new="invalid"
+    if [[ ${#fNew} -eq 0 ]]
+      then
+        flag_new="invalid"
+    fi
+    if [ $flag_new = "invalid" ]
           then
             echo "Invalid merge branch! Please try again"
-            list_of_files
-        fi
-
+            merge_branch
+    else
         echo "Please confirm if merge conflicts recorded for merging $fNew branch to $fBranch branch are manually resolved? (Y/N)"
         read fConflict < /dev/tty
         if [[ $fConflict = "Y" ]]
           then
-            echo "Merging $fNew branch to $fBranch branch..."
+            echo "Merging $fNew branch to $fBranch branch"
             flag_merge="true"
         elif [[ $fConflict = "N" ]]
           then
@@ -62,9 +62,18 @@ list_of_files()
             echo "Wrong input! Please try again"
             list_of_files
         fi
-
     fi
 
+}
+
+list_of_files()
+{
+    status=$(git status)
+    fBranch=`git rev-parse --abbrev-ref HEAD`
+    if [[ $status == *"You have unmerged paths."* ]]
+      then
+        merge_branch
+    fi
     deleted_files=`git status --porcelain | awk 'match($1, "D") || match($1, "UD"){print $2}'`
     modified_files=`git status --porcelain | awk 'match($1, "M") || match($1, "UU"){print $2}'`
     added_files=`git status --porcelain | awk 'match($1, "?") || match($1, "A"){print $2}'`
@@ -89,19 +98,37 @@ list_of_files()
             printf "\nAdded:\n$added_files\n"
         fi
     fi
-    module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}" #$'\n'"${both_modified}"
+    if [[ $flag_merge != "true" ]]
+      then
+        module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
+    else
+        module_list=$modified_files
+    fi
+}
+
+validate()
+{
+    git branch -r > $cur_dir/branches.txt
+    awk '{gsub(/origin\//," ")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
+    all_branches=`sed -e "/HEAD/d" $cur_dir/branches1.txt`
+    echo $all_branches | grep -F -q -w "$1";
 }
 
 git_add()
 {
     fBranch=`git rev-parse --abbrev-ref HEAD`
     fProd_branch=`awk 'BEGIN {FS = ", "}; {if ($7 == "In-Production") {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    if [[ $fBranch = "master" ]]
+    live=`awk -v var1=$fBranch 'BEGIN {FS = ", "}; {if ($13 == var1) {print $13}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    [[ $live =~ (^|[[:space:]])"$fBranch"($|[[:space:]]) ]] && flag_live="true" || flag_live="false"
+    [[ $fProd_branch =~ (^|[[:space:]])"$fBranch"($|[[:space:]]) ]] && flag_prod="true" || flag_prod="false"
+    
+    if [[ $flag_live = "true" ]]
       then
         echo "Sorry! You cannot push changes directly to $fBranch branch. Only other branches can be merged to $fBranch branch."
         rm $cur_dir/temp_push.conf &> /dev/null
         exit
-    elif [[ $fBranch = $fProd_branch ]]
+    fi
+    if [[ $flag_prod = "true" ]]
       then
         echo "Sorry! You cannot push any more changes to $fBranch branch. This branch is already in production and no more changes to this branch will be acknowledged."
         rm $cur_dir/temp_push.conf &> /dev/null
@@ -111,6 +138,12 @@ git_add()
     read fFile < /dev/tty
     if [[ $fFile = "Y" ]]
       then
+        #echo $module_list
+        #[[ $module_list =~ (^|[[:space:]])"$deleted_files"($|[[:space:]]) ]] && flag_del="true" || flag_del="false"
+        #if [[ $flag_del = "true" ]] ||  [[ $deleted_files != "" ]]
+        #  then
+        #    echo "Please confirm if you would really want to delete $deleted_files files from $fBranch branch. (Y/N)"
+            
         git add $module_list &> /dev/null
     elif [[ $fFile = "N" ]]
       then
@@ -186,25 +219,33 @@ tracker_update ()
 
 rebase_email ()
 {        
+    if [[ $flag_merge = "true" ]]
+      then
         rebase_user=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
         rebase_email_id=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
         rebase_branch=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-        username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $10}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-        email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $11}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-        date=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $12}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/" "/,"")}1'`
-        if [[ $rebase_user != "" ]] && [[ $rebase_email_id != "" ]] && [[ $rebase_branch != "" ]]
-          then
-            array1=(${rebase_user// / })
-            array2=(${rebase_email_id// / })
-            array3=(${rebase_branch// / })
-            length=${#array1[@]}
-            
-            for ((i=0;i<=$length-1;i++)); do
-                echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date . \nThe list of changed files is as below: \n\nDeleted: $remote_del \nModified: $remote_mod \nAdded: $remote_add \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
-            done
-        fi
-}
+    else
+        rebase_user=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+        rebase_email_id=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+        rebase_branch=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($2 == var1) {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    fi
 
+    username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $10}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $11}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    date=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $12}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/" "/,"")}1'`
+    if [[ $rebase_user != "" ]] && [[ $rebase_email_id != "" ]] && [[ $rebase_branch != "" ]]
+      then
+        array1=(${rebase_user// / })
+        array2=(${rebase_email_id// / })
+        array3=(${rebase_branch// / })
+        length=${#array1[@]}
+            
+        for ((i=0;i<=$length-1;i++)); do
+            echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date . \nThe list of changed files is as below: \n\nDeleted: $remote_del \nModified: $remote_mod \nAdded: $remote_add \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+        done
+        echo -e "Hi $username , \n\nYou have successfully merged $fNew branch to $branch branch for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+    fi
+}
 
 repo_dir
 list_of_files

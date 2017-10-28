@@ -39,17 +39,23 @@ base_branch()
       then
         flag="invalid"
     fi
+    
+    live=`awk -v var1=$fBase 'BEGIN {FS = ", "}; {if ($13 == var1) {print $13}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
     fProd_branch=`awk 'BEGIN {FS = ", "}; {if ($7 == "In-Production") {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    if [[ $fBase == $fProd_branch ]]
+    [[ $live =~ (^|[[:space:]])"$fBase"($|[[:space:]]) ]] && flag_live="true" || flag_live="false"
+    [[ $fProd_branch =~ (^|[[:space:]])"$fBase"($|[[:space:]]) ]] && flag_prod="true" || flag_prod="false"
+
+    if [[ $flag_prod = "true" ]]
       then
         echo "Sorry! You cannot push any more changes to $fBase branch. This branch is already in production and no more changes to this branch will be acknowledged."
+        rm $cur_dir/temp_merge.conf &> /dev/null
         exit
     fi
-    if [[ $fBase != "master" ]]
+    if [[ $flag_live = "false" ]]
       then
         flag="valid"
     else
-        echo "You are about to merge $fNew to branch master branch. Please confirm the changes made as part of $fNew branch is in production. (Y/N)"
+        echo "You are about to merge $fNew branch to $fBase branch. $fBase is the live branch hence please confirm the changes made as part of $fNew branch is in production. (Y/N)"
         read fMaster < /dev/tty
         if [[ $fMaster = "Y" ]]
           then
@@ -164,8 +170,9 @@ merge()
             echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
             printf "Please re-baseline $fNew branch. $fBase branch is ahead of $fNew branch!\nPlease consult $cur_dir/${fBase}_diff_${fNew}.txt file.\n"
         fi
-    else
-        printf "Do you want to continue with automerging and code push to remote repository? (Y/N)"
+    elif [[ $merge_var == "" ]]
+      then
+        echo "Do you want to continue with automerging $fNew branch to $fBase branch and code push to remote repository? (Y/N)"
         read fMerge < /dev/tty
         if [[ $fMerge = "Y" ]]
           then
@@ -178,7 +185,24 @@ merge()
             echo "Wrong input! Please try again"
             merge
         fi
-     fi
+    elif [[ $merge_var == *"Removing"* ]]
+      then
+        echo $merge_var " - Do you want to continue removing the files from $fBase branch? (Y/N)"
+        read fRemove < /dev/tty
+        if [[ $fRemove = "Y" ]]
+          then
+            git merge $fNew &> /dev/null
+            code_push
+        elif [[ $fRemove = "N" ]]
+          then
+            echo "Auto-merging stopped before committing as requested!"
+        else
+            echo "Wrong input! Please try again"
+            merge
+        fi
+    else
+        echo -e "Merge failure - Please find the error below\n\n*****ERROR****\n\n$merge_var"
+    fi
 }
 
 code_push()
@@ -191,20 +215,19 @@ code_push()
         updated_username=`git config user.name`
         commit_details=`git rev-parse --verify $fBase`
         
-        deleted_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "D") || match($1, "UD"){print $2}'`
-        modified_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "M") || match($1, "UU"){print $2}'`
-        added_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "?") || match($1, "A"){print $2}'`
-
-
-        if [[ $fBase != "master" ]]
+        deleted_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "D") || match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        modified_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "M") || match($1, "UU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        added_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "?") || match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        if [[ $flag_live = "false" ]]
           then
-            `awk -v var1=$fBase -v var2="$commit_details" -v var3=$fNew -v var4=$deleted_files -v var5=$modified_files -v var9=$added_files -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Merge Commit (" var3 " -> " var1 ") - Id: " var2 " - Deleted: " var4 " Modified: " var5 " Added: " var9; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
+            `awk -v var1=$fBase -v var2="$commit_details" -v var3=$fNew -v var4="$deleted_files" -v var5="$modified_files" -v var9="$added_files" -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Merge Commit (" var3 " -> " var1 ") - Id: " var2 " - Deleted: " var4 " Modified: " var5 " Added: " var9; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
             mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
  
             rebase_email $fBase
         else
-            `awk -v var1=$fNew -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$7 = "In-Production"; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
-             mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
+            `awk -v var1=$fNew -v var2="$commit_details" -v var3=$fBase -v var4="$deleted_files" -v var5="$modified_files" -v var9="$added_files" -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Merge Commit (" var1 " -> " var3 ") - Id: " var2 " - Deleted: " var4 " Modified: " var5 " Added: " var9; $7 = "In-Production"; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/research_tracker.csv >> $cur_dir/research_tracker1.csv` &> /dev/null
+            mv $cur_dir/research_tracker1.csv $cur_dir/research_tracker.csv &> /dev/null
+            rebase_email $fBase
         fi
     else
         echo "Code push failed! Please try again"
@@ -263,13 +286,21 @@ rebase_email ()
 {
     branch=`echo $1`
     commit=`git rev-parse --verify $branch`
-    rebase_user=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    rebase_email_id=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    rebase_branch=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2) {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $10}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $11}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    date=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $12}}' $cur_dir/research_tracker.csv`
-
+    
+    if [[ $flag_live = "false" ]]
+      then
+        username=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $10}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+        email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $11}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+        date=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $12}}' $cur_dir/research_tracker.csv`
+    else
+        username=`awk -v var1=$fNew 'BEGIN {FS = ", "}; {if ($3 == var1) {print $10}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+        email=`awk -v var1=$fNew 'BEGIN {FS = ", "}; {if ($3 == var1) {print $11}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+        date=`awk -v var1=$fNew 'BEGIN {FS = ", "}; {if ($3 == var1) {print $12}}' $cur_dir/research_tracker.csv`
+    fi
+    rebase_user=`awk -v var1=$branch -v var2=$fNew -v var3="In-Production" 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2 && $7 != var3) {print $4}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    rebase_email_id=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2 && $7 != var3) {print $5}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    rebase_branch=`awk -v var1=$branch -v var2=$fNew 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2 && $7 != var3) {print $3}}' $cur_dir/research_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    
     if [[ $rebase_user != "" ]] && [[ $rebase_email_id != "" ]] && [[ $rebase_branch != "" ]]
       then
         array1=(${rebase_user// / })
@@ -278,8 +309,15 @@ rebase_email ()
         length=${#array1[@]}
 
         for ((i=0;i<=$length-1;i++)); do
+            #if [[ $flag_live = "false" ]]
+            #  then
             echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+           # else
+           # echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+#             echo -e "Hi $username , \n\nYou have successfully merged $fNew branch to $branch branch for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files . \n\nSeparate email has been sent to ${array1[$i]} to re-base line the branch ${array3[$i]}. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+            #fi
         done
+        echo -e "Hi $username , \n\nYou have successfully merged $fNew branch to $branch branch for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
     fi
 }
 

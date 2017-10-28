@@ -4,7 +4,7 @@ awk '{if(NR>1)print}' create.conf > temp_create.conf
 cur_dir="$PWD"
 email=`git config user.email`
 username=`git config user.name`
-while IFS="|"  read -r fDir fBase fNew fURL fOwner fOwner_email;
+while IFS="|"  read -r fDir fBase fNew fURL fOwner fOwner_email live;
 do
 dir_repo=""
 repo_dir()
@@ -50,6 +50,26 @@ base_branch()
         base_branch
     fi
 }
+
+live_branch()
+{
+    if [[ $live = "" ]] || [[ $flag_live = "invalid" ]]
+      then
+        echo "Live/Production branch :"
+        read live < /dev/tty
+    fi
+    validate $live && flag_live="valid" || flag_live="invalid"
+    if [[ ${#live} -eq 0 ]]
+      then
+        flag_live="invalid"
+    fi
+    if [ $flag_live != "valid" ]
+      then
+        echo "Invalid live branch. Please try again!"
+        live_branch
+    fi
+}
+
 
 new_branch()
 {
@@ -124,14 +144,15 @@ if [[ $fResp = "Y" ]]
     repo_clone
     base_branch
     new_branch
+    live_branch
     code_push
     if [ ! -f $cur_dir/${dir_repo}_tracker.csv ]
       then
-        echo "Repository name","Base Branch","New Branch","Created By","Branch Owner's Email address","Commit Id & Changed files, Status", "System Owner", "System Owner's Email address", "Last Updated By", "Last Updated Email address", "Last Updated time" > excel_header
+        echo "Repository name","Base Branch","New Branch","Created By","Branch Owner's Email address","Commit Id & Changed files, Status", "System Owner", "System Owner's Email address", "Last Updated By", "Last Updated Email address", "Last Updated time", "Live Branch" > excel_header
         paste -sd, excel_header >> $cur_dir/${dir_repo}_tracker.csv && rm excel_header
     fi
     date=`date "+%Y-%m-%d %H:%M:%S"`
-    echo $dir_repo, $fBase, $fNew, $username, $email, , "Active", $fOwner, $fOwner_email, $username, $email, $date > excel_convert
+    echo $dir_repo, $fBase, $fNew, $username, $email, , "Active", $fOwner, $fOwner_email, $username, $email, $date, $live > excel_convert
     paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
     echo "New branch : $fNew created successfully and baselined to : $fBase branch"
