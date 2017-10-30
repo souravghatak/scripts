@@ -74,9 +74,49 @@ list_of_files()
       then
         merge_branch
     fi
-    deleted_files=`git status --porcelain | awk 'match($1, "D") || match($1, "UD"){print $2}'`
-    modified_files=`git status --porcelain | awk 'match($1, "M") || match($1, "UU"){print $2}'`
-    added_files=`git status --porcelain | awk 'match($1, "?") || match($1, "A"){print $2}'`
+    
+    deleted_files=`git status --porcelain | awk 'match($1, "D") || match($1, "UD") || match($1, "DU") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    modified_files=`git status --porcelain | awk 'match($1, "M") || match($1, "UU") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    added_files=`git status --porcelain | awk 'match($1, "?") || match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+
+    deleted_files1=`git status --porcelain | awk 'match($1, "UD"){print $2}'`
+    deleted_files2=`git status --porcelain | awk 'match($1, "DU"){print $2}'`
+    modified_files1=`git status --porcelain | awk 'match($1, "UU"){print $2}'`
+    added_files1=`git status --porcelain | awk 'match($1, "AA"){print $2}'`
+
+    if [[ $deleted_files1 != "" ]]
+      then
+        echo "Removed $deleted_files1 from branch $fNew . Do you want to continue removing these files from $fBranch branch while merging $fNew branch? (Y/N)"
+        read fDel < /dev/tty
+        if [[ $fDel = "Y" ]]
+          then
+            git rm $deleted_files1 &> /dev/null
+            deleted_files1="" 
+        elif [[ $fDel = "N" ]]
+          then
+            echo "Not removing $deleted_files1 from $fBranch branch" 
+        else
+            echo "Wrong input! Please try again"
+            list_of_files
+        fi
+    fi
+
+    if [[ $deleted_files2 != "" ]]
+      then
+        echo "Removed $deleted_files2 from branch $fBranch . Do you want to continue adding these files to $fBranch branch while merging $fNew branch? (Y/N)"
+        read fDel1 < /dev/tty
+        if [[ $fDel1 = "Y" ]]
+          then
+            echo "Adding $deleted_files2 to $fBranch branch"
+        elif [[ $fDel1 = "N" ]]
+          then
+            git rm $deleted_files2 &> /dev/null
+            deleted_files2=""
+        else
+            echo "Wrong input! Please try again"
+            list_of_files
+        fi
+    fi    
     
     if [[ $deleted_files = "" ]] && [[ $modified_files = "" ]] && [[ $added_files = "" ]]
       then
@@ -98,11 +138,11 @@ list_of_files()
             printf "\nAdded:\n$added_files\n"
         fi
     fi
-    if [[ $flag_merge != "true" ]]
+    if [[ $flag_merge = "true" ]]
       then
-        module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
+        module_list="$deleted_files1"$'\n'"$deleted_files2"$'\n'"${modified_files1}"$'\n'"${added_files1}"
     else
-        module_list=$modified_files
+        module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
     fi
 }
 
@@ -138,12 +178,6 @@ git_add()
     read fFile < /dev/tty
     if [[ $fFile = "Y" ]]
       then
-        #echo $module_list
-        #[[ $module_list =~ (^|[[:space:]])"$deleted_files"($|[[:space:]]) ]] && flag_del="true" || flag_del="false"
-        #if [[ $flag_del = "true" ]] ||  [[ $deleted_files != "" ]]
-        #  then
-        #    echo "Please confirm if you would really want to delete $deleted_files files from $fBranch branch. (Y/N)"
-            
         git add $module_list &> /dev/null
     elif [[ $fFile = "N" ]]
       then
@@ -243,7 +277,10 @@ rebase_email ()
         for ((i=0;i<=$length-1;i++)); do
             echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date . \nThe list of changed files is as below: \n\nDeleted: $remote_del \nModified: $remote_mod \nAdded: $remote_add \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
         done
-        echo -e "Hi $username , \n\nYou have successfully merged $fNew branch to $branch branch for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+        if [[ $flag_merge = "true" ]]
+          then
+            echo -e "Hi $username , \n\nYou have successfully merged $fNew branch to $branch branch for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+        fi
     fi
 }
 
@@ -254,5 +291,6 @@ git_commit
 git_push_decide
 tracker_update
 rebase_email
+rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
 done < temp_push.conf
 rm $cur_dir/temp_push.conf &> /dev/null

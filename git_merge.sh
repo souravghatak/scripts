@@ -309,13 +309,7 @@ rebase_email ()
         length=${#array1[@]}
 
         for ((i=0;i<=$length-1;i++)); do
-            #if [[ $flag_live = "false" ]]
-            #  then
             echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
-           # else
-           # echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
-#             echo -e "Hi $username , \n\nYou have successfully merged $fNew branch to $branch branch for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files . \n\nSeparate email has been sent to ${array1[$i]} to re-base line the branch ${array3[$i]}. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
-            #fi
         done
         echo -e "Hi $username , \n\nYou have successfully merged $fNew branch to $branch branch for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
     fi
