@@ -136,9 +136,9 @@ validate()
     echo $all_branches | grep -F -q -w "$1";
 }
 
-echo "Do you want to create a new branch? (Y/N)"
+echo -e "Do you want to create a new branch $fNew - baselined to $fBase branch? \n\nFor Yes - Press 1\nFor No - Press 2"
 read fResp < /dev/tty
-if [[ $fResp = "Y" ]]
+if [[ $fResp = "1" ]]
   then
     repo_dir
     repo_clone
@@ -156,7 +156,7 @@ if [[ $fResp = "Y" ]]
     paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
     echo "New branch : $fNew created successfully and baselined to : $fBase branch"
-elif [[ $fResp = "N" ]]
+elif [[ $fResp = "2" ]]
   then
     echo "Thank you! Have a nice day"
 else
