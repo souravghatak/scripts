@@ -47,7 +47,7 @@ merge_branch()
             echo "Invalid merge branch! Please try again"
             merge_branch
     else
-        echo "Please confirm if merge conflicts recorded for merging $fNew branch to $fBranch branch are manually resolved? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9\nFor going back to main menu - Press 0"
+        echo -e "Please confirm if merge conflicts recorded for merging $fNew branch to $fBranch branch are manually resolved? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fConflict < /dev/tty
         if [[ $fConflict = "1" ]]
           then
@@ -65,12 +65,6 @@ merge_branch()
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             exit
-        elif [[ $fConflict = "0" ]]
-          then
-            echo "Going back to main menu"
-            rm $cur_dir/temp_push.conf &> /dev/null
-            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-            ./master.sh
         else
             echo "Wrong input! Please try again"
             list_of_files
@@ -98,7 +92,7 @@ list_of_files()
 
     if [[ $deleted_files1 != "" ]]
       then
-        echo "Removed $deleted_files1 from branch $fNew . Do you want to continue removing these files from $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9\nFor going back to main menu - Press 0"
+        echo -e "Removed $deleted_files1 from branch $fNew . Do you want to continue removing these files from $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fDel < /dev/tty
         if [[ $fDel = "1" ]]
           then
@@ -113,12 +107,6 @@ list_of_files()
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             exit
-        elif [[ $fDel = "0" ]]
-          then
-            echo "Going back to main menu"
-            rm $cur_dir/temp_push.conf &> /dev/null
-            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-            ./master.sh
         else
             echo "Wrong input! Please try again"
             list_of_files
@@ -127,7 +115,7 @@ list_of_files()
 
     if [[ $deleted_files2 != "" ]]
       then
-        echo "Removed $deleted_files2 from branch $fBranch . Do you want to continue adding these files to $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9\nFor going back to main menu - Press 0"
+        echo -e "Removed $deleted_files2 from branch $fBranch . Do you want to continue adding these files to $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fDel1 < /dev/tty
         if [[ $fDel1 = "1" ]]
           then
@@ -142,12 +130,6 @@ list_of_files()
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             exit
-        elif [[ $fDel = "0" ]]
-          then
-            echo "Going back to main menu"
-            rm $cur_dir/temp_push.conf &> /dev/null
-            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-            ./master.sh
         else
             echo "Wrong input! Please try again"
             list_of_files
@@ -213,7 +195,7 @@ git_add()
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         exit
     fi
-    echo "Do you want to push all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9\nFor going back to main menu - Press 0"
+    echo -e "Do you want to push all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
     read fFile < /dev/tty
     if [[ $fFile = "1" ]]
       then
@@ -229,12 +211,6 @@ git_add()
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         exit
-    elif [[ $fFile = "0" ]]
-      then
-        echo "Going back to main menu"
-        rm $cur_dir/temp_push.conf &> /dev/null
-        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-        ./master.sh
     else
         echo "Wrong input! Please try again"
         git_add
@@ -261,7 +237,7 @@ git_commit()
 git_push_decide()
 {
     fBranch=`git rev-parse --abbrev-ref HEAD`
-    echo "Git commit successful for $fBranch branch! Do you want to push the changes to remote repository? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9\nFor going back to main menu - Press 0"
+    echo -e "Git commit successful for $fBranch branch! Do you want to push the changes to remote repository? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
     read fPush < /dev/tty
     if [[ $fPush = "1" ]]
       then
@@ -275,12 +251,6 @@ git_push_decide()
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         exit
-    elif [[ $fPush = "0" ]]
-      then
-        echo "Going back to main menu"
-        rm $cur_dir/temp_push.conf &> /dev/null
-        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-        ./master.sh
     else
         echo "Wrong input! Please try again"
         git_push_decide 
