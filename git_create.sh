@@ -148,7 +148,7 @@ if [[ $fResp = "1" ]]
     code_push
     if [ ! -f $cur_dir/${dir_repo}_tracker.csv ]
       then
-        echo "Repository name","Base Branch","New Branch","Created By","Branch Owner's Email address","Commit Id & Changed files, Status", "System Owner", "System Owner's Email address", "Last Updated By", "Last Updated Email address", "Last Updated time", "Live Branch" > excel_header
+        echo "Repository name","Base Branch","New Branch","Created By","Branch Owner's Email address","Commit Id & Changed files, Status", "System Owner Git username", "System Owner's Email address", "Last Updated By", "Last Updated Email address", "Last Updated time", "Live Branch" > excel_header
         paste -sd, excel_header >> $cur_dir/${dir_repo}_tracker.csv && rm excel_header
     fi
     date=`date "+%Y-%m-%d %H:%M:%S"`
