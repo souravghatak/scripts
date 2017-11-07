@@ -55,12 +55,12 @@ base_branch()
       then
         flag="valid"
     else
-        echo "You are about to merge $fNew branch to $fBase branch. $fBase is the live branch hence please confirm the changes made as part of $fNew branch is in production. (Y/N)"
+        echo -e "You are about to merge $fNew branch to $fBase branch. $fBase is the live branch hence please confirm the changes made as part of $fNew branch is in production. \n\nFor Yes, Press 1\nFor No, Press 2"
         read fMaster < /dev/tty
-        if [[ $fMaster = "Y" ]]
+        if [[ $fMaster = "1" ]]
           then
             flag="valid"
-        elif [[ $fMaster = "N" ]]
+        elif [[ $fMaster = "2" ]]
           then
             flag="invalid"
         else
@@ -144,13 +144,13 @@ merge()
     merge_var=$(git merge $fNew --no-commit --no-ff; git merge --abort 2>&1) 
     if [[ $merge_var == *"CONFLICT"* ]]
       then
-        echo "There are merge conflicts. Do you want to continue merging? (Y/N)"
+        echo -e "There are merge conflicts. Do you want to continue merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fConf < /dev/tty
-        if [[ $fConf = "Y" ]]
+        if [[ $fConf = "1" ]]
           then
             git merge $fNew &> /dev/null
             echo "Resolve the conflicts manually and try git push"
-        elif [[ $fConf = "N" ]]
+        elif [[ $fConf = "2" ]]
           then
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
             git diff $fNew >> $cur_dir/${fBase}_diff_${fNew}.txt
@@ -172,13 +172,13 @@ merge()
         fi
     elif [[ $merge_var == "" ]]
       then
-        echo "Do you want to continue with automerging $fNew branch to $fBase branch and code push to remote repository? (Y/N)"
+        echo -e "Do you want to continue with automerging $fNew branch to $fBase branch and code push to remote repository? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fMerge < /dev/tty
-        if [[ $fMerge = "Y" ]]
+        if [[ $fMerge = "1" ]]
           then
             git merge $fNew &> /dev/null
             code_push
-        elif [[ $fMerge = "N" ]]
+        elif [[ $fMerge = "2" ]]
           then
             echo "Auto-merging stopped before committing as requested!"
         else
@@ -187,13 +187,13 @@ merge()
         fi
     elif [[ $merge_var == *"Removing"* ]]
       then
-        echo $merge_var " - Do you want to continue removing the files from $fBase branch? (Y/N)"
+        echo -e $merge_var " - Do you want to continue removing the files from $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fRemove < /dev/tty
-        if [[ $fRemove = "Y" ]]
+        if [[ $fRemove = "1" ]]
           then
             git merge $fNew &> /dev/null
             code_push
-        elif [[ $fRemove = "N" ]]
+        elif [[ $fRemove = "2" ]]
           then
             echo "Auto-merging stopped before committing as requested!"
         else
@@ -230,7 +230,7 @@ code_push()
             rebase_email $fBase
         fi
     else
-        echo "Code push failed! Please try again"
+        echo "Wrong git credentials! Code push failed! Please try again"
         code_push
     fi
 }
@@ -315,9 +315,9 @@ rebase_email ()
     fi
 }
 
-echo "Do you want to do git merging? (Y/N)"
+echo -e "Do you want to do git merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
 read fResp < /dev/tty
-if [[ $fResp = "Y" ]]
+if [[ $fResp = "1" ]]
   then
     repo_dir
     repo_clone
@@ -325,7 +325,7 @@ if [[ $fResp = "Y" ]]
     base_branch
     merge
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-elif [[ $fResp = "N" ]]
+elif [[ $fResp = "2" ]]
   then
     echo "Thank you! Have a nice day"
 else
