@@ -94,13 +94,13 @@ new_branch()
 
 code_push()
 {
-    git push origin $fNew &> /dev/null && flag_push="success" || flag_push="failed"
+    git push origin $1 &> /dev/null && flag_push="success" || flag_push="failed"
     if [[ $flag_push = "success" ]]
       then
         echo         
     else
         echo "Wrong git credentials! Code push failed! Please try again"
-        code_push
+        code_push $1
     fi
 }
 
@@ -136,6 +136,19 @@ validate()
     echo $all_branches | grep -F -q -w "$1";
 }
 
+download_tracker()
+{
+    git fetch &> /dev/null
+    git checkout origin/master -- ${dir_repo}_tracker.csv &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
+    if [ $flag_tracker == "invalid" ]
+      then
+        echo "${dir_repo}_tracker.csv file is not available in remote repository.Creating new ${dir_repo}_tracker.csv file."
+    else
+        mv ${dir_repo}_tracker.csv $cur_dir/
+        git reset HEAD ${dir_repo}_tracker.csv &> /dev/null
+    fi
+}
+
 echo -e "Do you want to create a new branch $fNew - baselined to $fBase branch? \n\nFor Yes - Press 1\nFor No - Press 2"
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
@@ -145,7 +158,8 @@ if [[ $fResp = "1" ]]
     base_branch
     new_branch
     live_branch
-    code_push
+    code_push $fNew
+    download_tracker
     if [ ! -f $cur_dir/${dir_repo}_tracker.csv ]
       then
         echo "Repository name","Base Branch","New Branch","Created By","Branch Owner's Email address","Commit Id & Changed files, Status", "System Owner Git username", "System Owner's Email address", "Last Updated By", "Last Updated Email address", "Last Updated time", "Live Branch" > excel_header
@@ -154,6 +168,14 @@ if [[ $fResp = "1" ]]
     date=`date "+%Y-%m-%d %H:%M:%S"`
     echo $dir_repo, $fBase, $fNew, $username, $email, , "Active", $fOwner, $fOwner_email, $username, $email, $date, $live > excel_convert
     paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
+    
+    git checkout master &> /dev/null
+    mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
+    git add ${dir_repo}_tracker.csv &> /dev/null
+    git commit -m "Created new branch : $fNew" &> /dev/null
+    echo "Updated ${dir_repo}_tracker.csv"
+    #git push origin master &> /dev/null
+    code_push master
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
     echo "New branch : $fNew created successfully and baselined to : $fBase branch"
 elif [[ $fResp = "2" ]]

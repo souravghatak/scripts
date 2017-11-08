@@ -149,7 +149,7 @@ merge()
         if [[ $fConf = "1" ]]
           then
             git merge $fNew &> /dev/null
-            echo "Resolve the conflicts manually and try git push"
+            echo "Resolve the conflicts manually, update push.conf with merge branch and do git push"
         elif [[ $fConf = "2" ]]
           then
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
