@@ -27,6 +27,46 @@ repo_dir()
     fi
 }
 
+download_tracker()
+{
+    awk '{if(NR>1)print}' $cur_dir/tracker.conf > $cur_dir/temp_tracker.conf
+    while IFS="|"  read -r fTrack_URL fTrack_Path ;
+    do
+        if [[ $fTrack_URL = "" ]] || [[ $flag_tracker = "invalid" ]]
+          then
+            echo "Repo URL for tracker:"
+            read fTrack_URL < /dev/tty
+        fi
+        if [[ ${#fTrack_URL} -eq 0 ]]
+          then
+            flag_tracker="invalid"
+            echo "Invalid URL! Please try again"
+            download_tracker
+        fi
+        cd $cur_dir
+        git clone $fTrack_URL &> /dev/null
+        dir_track_repo=`echo $fTrack_URL | awk -F '[/.]' '{print $(NF-1)}'`
+        cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
+        if [ $flag_tracker == "invalid" ]
+          then
+            echo "Invalid URL for tracker! Please try again"
+            download_tracker
+        fi
+
+        git fetch &> /dev/null
+        git checkout origin/master -- $fTrack_Path${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
+        if [ $flag_repo_tracker == "invalid" ]
+          then
+            echo "${dir_repo}_tracker.csv file is not available in remote repository.Creating new ${dir_repo}_tracker.csv file."
+        else
+            mv ${dir_repo}_tracker.csv $cur_dir/
+            git reset HEAD ${dir_repo}_tracker.csv &> /dev/null
+        fi
+    done < $cur_dir/temp_tracker.conf
+    rm $cur_dir/temp_tracker.conf
+}
+
+
 base_branch()
 {
     if [[ $fBase = "" ]] || [[ $flag = "invalid" ]]
@@ -119,6 +159,7 @@ rebase_branch ()
 
 merge_branch()
 {
+    cd $fDir/$dir_repo
     if [[ $fNew = "" ]] || [[ $flag_new = "invalid" ]]
       then
         echo "Merge Branch :"
@@ -181,6 +222,8 @@ merge()
         elif [[ $fMerge = "2" ]]
           then
             echo "Auto-merging stopped before committing as requested!"
+            rm $cur_dir/temp_merge.conf &> /dev/null
+            exit
         else
             echo "Wrong input! Please try again"
             merge
@@ -315,15 +358,37 @@ rebase_email ()
     fi
 }
 
-echo -e "Do you want to do git merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+git_push()
+{
+    git push origin $1 &> /dev/null && flag_push="success" || flag_push="failed"
+    branch=`echo $1`
+    if [[ $flag_push = "success" ]]
+      then
+        echo "Changes pushed to remote $branch branch!"
+    else
+        echo "Wrong git credentials! Code push failed! Please try again"
+        git_push $branch
+    fi
+}
+
+
+echo -e "Do you want to merge $fNew branch into $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
   then
     repo_dir
     repo_clone
+    download_tracker
     merge_branch
     base_branch
     merge
+    cd $cur_dir/$dir_track_repo
+    mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
+    git add ${dir_repo}_tracker.csv &> /dev/null
+    git commit -m "Merged branch $fNew into $fBase branch" &> /dev/null
+    echo "Updated ${dir_repo}_tracker.csv"
+    git_push master
+
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
 elif [[ $fResp = "2" ]]
   then
