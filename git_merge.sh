@@ -29,7 +29,8 @@ repo_dir()
 
 download_tracker()
 {
-    awk '{if(NR>1)print}' $cur_dir/tracker.conf > $cur_dir/temp_tracker.conf
+    cd $cur_dir
+    awk '{if(NR>1)print}' tracker.conf > temp_tracker.conf
     while IFS="|"  read -r fTrack_URL fTrack_Path ;
     do
         if [[ $fTrack_URL = "" ]] || [[ $flag_tracker = "invalid" ]]
@@ -43,27 +44,32 @@ download_tracker()
             echo "Invalid URL! Please try again"
             download_tracker
         fi
-        cd $cur_dir
         git clone $fTrack_URL &> /dev/null
+        echo $fTrack_URL
         dir_track_repo=`echo $fTrack_URL | awk -F '[/.]' '{print $(NF-1)}'`
+        echo $dir_track_repo
         cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
         if [ $flag_tracker == "invalid" ]
           then
             echo "Invalid URL for tracker! Please try again"
             download_tracker
         fi
-
         git fetch &> /dev/null
         git checkout origin/master -- $fTrack_Path${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
-        if [ $flag_repo_tracker == "invalid" ]
+        if [[ $flag_repo_tracker == "invalid" ]]
           then
-            echo "${dir_repo}_tracker.csv file is not available in remote repository.Creating new ${dir_repo}_tracker.csv file."
+            #echo "Sorry! ${dir_repo}_tracker.csv file is not available in remote repository hence you cannot merge $fNew branch into $fBase branch. Please investigate URL - $fTrack_URL and try again."
+            #rm $cur_dir/temp_tracker.conf &> /dev/null
+            #rm $cur_dir/temp_merge.conf &> /dev/null
+            #exit
+            echo "Sorry! ${dir_repo}_tracker.csv file is not available. Please try again"
+            download_tracker
         else
             mv ${dir_repo}_tracker.csv $cur_dir/
             git reset HEAD ${dir_repo}_tracker.csv &> /dev/null
         fi
     done < $cur_dir/temp_tracker.conf
-    rm $cur_dir/temp_tracker.conf
+    rm $cur_dir/temp_tracker.conf &> /dev/null
 }
 
 
@@ -191,11 +197,17 @@ merge()
           then
             git merge $fNew &> /dev/null
             echo "Resolve the conflicts manually, update push.conf with merge branch and do git push"
+            rm $cur_dir/temp_merge.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            exit
         elif [[ $fConf = "2" ]]
           then
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
             git diff $fNew >> $cur_dir/${fBase}_diff_${fNew}.txt
             echo "Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
+            rm $cur_dir/temp_merge.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            exit
         else
             echo "Wrong input! Please try again"
             merge
@@ -206,10 +218,16 @@ merge()
         if [[ ${#git_diff} -eq 0 ]]
           then
             echo "There is nothing to merge and no difference between branch $fBase and $fNew"
+            rm $cur_dir/temp_merge.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            exit
         else
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
             echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
             printf "Please re-baseline $fNew branch. $fBase branch is ahead of $fNew branch!\nPlease consult $cur_dir/${fBase}_diff_${fNew}.txt file.\n"
+            rm $cur_dir/temp_merge.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            exit
         fi
     elif [[ $merge_var == "" ]]
       then
@@ -223,6 +241,7 @@ merge()
           then
             echo "Auto-merging stopped before committing as requested!"
             rm $cur_dir/temp_merge.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -239,12 +258,18 @@ merge()
         elif [[ $fRemove = "2" ]]
           then
             echo "Auto-merging stopped before committing as requested!"
+            rm $cur_dir/temp_merge.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            exit
         else
             echo "Wrong input! Please try again"
             merge
         fi
     else
         echo -e "Merge failure - Please find the error below\n\n*****ERROR****\n\n$merge_var"
+        rm $cur_dir/temp_merge.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        exit
     fi
 }
 

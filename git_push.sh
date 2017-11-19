@@ -82,7 +82,6 @@ list_of_files()
         merge_branch
     fi
     
-    #deleted_files=`git status --porcelain | awk 'match($1, "D") || match($1, "UD") || match($1, "DU") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     deleted_files=`git status --porcelain | awk '{if ($1 == "D") {print $2}}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     modified_files=`git status --porcelain | awk 'match($1, "M") || match($1, "UU") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     added_files=`git status --porcelain | awk 'match($1, "?") || match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
@@ -179,6 +178,9 @@ validate()
 
 download_tracker()
 {
+    cd $fDir
+    fBranch=`git rev-parse --abbrev-ref HEAD`
+    cd $cur_dir
     awk '{if(NR>1)print}' $cur_dir/tracker.conf > $cur_dir/temp_tracker.conf
     while IFS="|"  read -r fTrack_URL fTrack_Path ;
     do
@@ -193,7 +195,7 @@ download_tracker()
             echo "Invalid URL! Please try again"
             download_tracker
         fi
-        cd $cur_dir
+        echo "Downloading updated repository for tracker"
         git clone $fTrack_URL &> /dev/null
         dir_track_repo=`echo $fTrack_URL | awk -F '[/.]' '{print $(NF-1)}'`
         cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
@@ -207,13 +209,17 @@ download_tracker()
         git checkout origin/master -- $fTrack_Path${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
         if [ $flag_repo_tracker == "invalid" ]
           then
-            echo "${dir_repo}_tracker.csv file is not available in remote repository.Creating new ${dir_repo}_tracker.csv file."
+            echo "Sorry! ${dir_repo}_tracker.csv file is not available in remote repository hence you cannot push any changes to $fBranch branch. Please investigate URL - $fTrack_URL and try again."
+            rm $cur_dir/temp_push.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/temp_tracker.conf &> /dev/null
+            exit
         else
             mv ${dir_repo}_tracker.csv $cur_dir/
             git reset HEAD ${dir_repo}_tracker.csv &> /dev/null
         fi
     done < $cur_dir/temp_tracker.conf
-    rm $cur_dir/temp_tracker.conf
+    rm $cur_dir/temp_tracker.conf &> /dev/null
 }
 
 
@@ -402,7 +408,12 @@ cd $cur_dir/$dir_track_repo
 #git checkout master &> /dev/null
 mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
 git add ${dir_repo}_tracker.csv &> /dev/null
-git commit -m "Created new branch : $fNew" &> /dev/null
+if [[ $flag_merge = "true" ]]
+  then
+    git commit -m "Merged $fNew branch into $branch branch" &> /dev/null
+else
+    git commit -m "Code push to $branch branch" &> /dev/null
+fi
 echo "Updated ${dir_repo}_tracker.csv"
 git_push master
 

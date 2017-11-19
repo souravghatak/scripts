@@ -172,13 +172,14 @@ download_tracker()
             git reset HEAD ${dir_repo}_tracker.csv &> /dev/null
         fi
     done < $cur_dir/temp_tracker.conf
-    rm $cur_dir/temp_tracker.conf
+    rm $cur_dir/temp_tracker.conf &> /dev/null
 }
 
 echo -e "Do you want to create a new branch $fNew - baselined to $fBase branch? \n\nFor Yes - Press 1\nFor No - Press 2"
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
   then
+    git config --global credential.helper 'cache --timeout=3600'
     repo_dir
     repo_clone
     base_branch
@@ -206,7 +207,7 @@ if [[ $fResp = "1" ]]
     echo "New branch : $fNew created successfully and baselined to : $fBase branch"
 elif [[ $fResp = "2" ]]
   then
-    echo "Thank you! Have a nice day"
+    echo "Update create.conf with the required inputs and try again"
 else
     echo "Wrong input"
     ./git_create.sh
