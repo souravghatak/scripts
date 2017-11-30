@@ -179,7 +179,7 @@ echo -e "Do you want to create a new branch $fNew - baselined to $fBase branch? 
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
   then
-    git config --global credential.helper 'cache --timeout=3600'
+    #git config --global credential.helper 'cache --timeout=900'
     repo_dir
     repo_clone
     base_branch

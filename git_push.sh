@@ -306,6 +306,9 @@ git_push_decide()
     elif [[ $fPush = "2" ]]
       then
         echo "Code push to remote is stopped as requested. Changes are committed locally in $fDir directory"
+        rm $cur_dir/temp_push.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        exit
     elif [[ $fPush = "9" ]]
       then
         echo "Thank you! Have a nice day"
@@ -394,7 +397,7 @@ rebase_email ()
         fi
     fi
 }
-
+git config --global credential.helper 'cache --timeout=900'
 download_tracker
 repo_dir
 list_of_files

@@ -45,9 +45,9 @@ download_tracker()
             download_tracker
         fi
         git clone $fTrack_URL &> /dev/null
-        echo $fTrack_URL
+        #echo $fTrack_URL
         dir_track_repo=`echo $fTrack_URL | awk -F '[/.]' '{print $(NF-1)}'`
-        echo $dir_track_repo
+        #echo $dir_track_repo
         cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
         if [ $flag_tracker == "invalid" ]
           then
@@ -401,6 +401,7 @@ echo -e "Do you want to merge $fNew branch into $fBase branch? \n\nFor Yes, Pres
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
   then
+    #git config --global credential.helper 'cache --timeout=900'
     repo_dir
     repo_clone
     download_tracker
