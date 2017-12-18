@@ -144,6 +144,7 @@ list_of_files()
         echo "No files changed to commit. Thank you"
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv
         exit
     else 
         echo "Please find the list of files (Deleted/Modified/Added)"
