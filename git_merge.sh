@@ -96,6 +96,7 @@ base_branch()
         echo "Sorry! You cannot push any more changes to $fBase branch. This branch is already in production and no more changes to this branch will be acknowledged."
         rm $cur_dir/temp_merge.conf &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
         exit
     fi
     if [[ $flag_live = "false" ]]
@@ -201,6 +202,7 @@ merge()
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
         elif [[ $fConf = "2" ]]
           then
@@ -210,6 +212,7 @@ merge()
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -224,6 +227,7 @@ merge()
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
         else
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
@@ -232,6 +236,7 @@ merge()
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
         fi
     elif [[ $merge_var == "" ]]
@@ -248,6 +253,7 @@ merge()
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -267,6 +273,7 @@ merge()
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -277,6 +284,7 @@ merge()
         rm $cur_dir/temp_merge.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
         exit
     fi
 }
@@ -397,7 +405,12 @@ git_push()
     branch=`echo $1`
     if [[ $flag_push = "success" ]]
       then
-        echo "Changes pushed to remote $branch branch!"
+        if [[ $flag_tracker_push = "true" ]]
+          then
+            echo "Updated ${dir_repo}_tracker.csv"
+        else
+            echo "Changes pushed to remote $branch branch!"
+        fi
     else
         echo "Wrong git credentials! Code push failed! Please try again"
         git_push $branch
@@ -420,7 +433,8 @@ if [[ $fResp = "1" ]]
     mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
     git add ${dir_repo}_tracker.csv &> /dev/null
     git commit -m "Merged branch $fNew into $fBase branch" &> /dev/null
-    echo "Updated ${dir_repo}_tracker.csv"
+    #echo "Updated ${dir_repo}_tracker.csv"
+    flag_tracker_push="true"
     git_push master
     cd ..
     rm -rf $cur_dir/$dir_track_repo &> /dev/null

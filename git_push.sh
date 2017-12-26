@@ -350,7 +350,12 @@ git_push()
     branch=`echo $1`
     if [[ $flag_push = "success" ]]
       then
-        echo "Changes pushed to remote $branch branch!"
+        if [[ $flag_tracker_push = "true" ]]
+          then
+            echo "Updated ${dir_repo}_tracker.csv" 
+        else
+            echo "Changes pushed to remote $branch branch!"
+        fi
     else
         echo "Wrong git credentials! Code push failed! Please try again"
         git_push $branch
@@ -439,7 +444,8 @@ if [[ $flag_merge = "true" ]]
 else
     git commit -m "Code push to $branch branch" &> /dev/null
 fi
-echo "Updated ${dir_repo}_tracker.csv"
+#echo "Updated ${dir_repo}_tracker.csv"
+flag_tracker_push="true"
 git_push master
 cd ..
 rm -rf $cur_dir/$dir_track_repo &> /dev/null
