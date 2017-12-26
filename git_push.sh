@@ -59,12 +59,16 @@ merge_branch()
             echo "Resolve the conflicts manually and try git push"
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         elif [[ $fConflict = "9" ]]
           then
             echo "Thank you!Have a nice day."
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -108,6 +112,8 @@ list_of_files()
             echo "Thank you! Have a nice day."
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -132,6 +138,8 @@ list_of_files()
             echo "Thank you! Have a nice day."
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -144,7 +152,8 @@ list_of_files()
         echo "No files changed to commit. Thank you"
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-        rm $cur_dir/${dir_repo}_tracker.csv
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     else 
         echo "Please find the list of files (Deleted/Modified/Added)"
@@ -214,6 +223,7 @@ download_tracker()
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm $cur_dir/temp_tracker.conf &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
             mv ${dir_repo}_tracker.csv $cur_dir/
@@ -241,12 +251,16 @@ git_add()
         echo "Sorry! You cannot push changes directly to $fBranch branch as this is a live / production branch. You can only merge branches to $fBranch branch."
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     elif [[ $flag_live = "true" && $flag_user = "false" ]]
       then
         echo "Sorry! You cannot push changes directly to $fBranch branch as this is a live / production branch. You can only merge branches to $fBranch branch when there are no merge conflicts. If it's really required, please consult your system owner."
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     fi
     
@@ -255,6 +269,8 @@ git_add()
         echo "Sorry! You cannot push any more changes to $fBranch branch. This branch is already in production and no more changes to this branch will be acknowledged."
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     fi
     echo -e "Do you want to push all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
@@ -272,6 +288,8 @@ git_add()
         echo "Thank you! Have a nice day"
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     else
         echo "Wrong input! Please try again"
@@ -309,12 +327,16 @@ git_push_decide()
         echo "Code push to remote is stopped as requested. Changes are committed locally in $fDir directory"
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     elif [[ $fPush = "9" ]]
       then
         echo "Thank you! Have a nice day"
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     else
         echo "Wrong input! Please try again"
@@ -398,7 +420,7 @@ rebase_email ()
         fi
     fi
 }
-git config --global credential.helper 'cache --timeout=900'
+#git config --global credential.helper 'cache --timeout=900'
 download_tracker
 repo_dir
 list_of_files
@@ -409,7 +431,6 @@ tracker_update
 rebase_email
 
 cd $cur_dir/$dir_track_repo
-#git checkout master &> /dev/null
 mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
 git add ${dir_repo}_tracker.csv &> /dev/null
 if [[ $flag_merge = "true" ]]
@@ -420,7 +441,8 @@ else
 fi
 echo "Updated ${dir_repo}_tracker.csv"
 git_push master
-
+cd ..
+rm -rf $cur_dir/$dir_track_repo &> /dev/null
 rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
 done < temp_push.conf
 rm $cur_dir/temp_push.conf &> /dev/null

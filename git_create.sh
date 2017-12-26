@@ -202,6 +202,8 @@ if [[ $fResp = "1" ]]
     git commit -m "Created new branch : $fNew" &> /dev/null
     echo "Updated ${dir_repo}_tracker.csv"
     code_push master
+    cd ..
+    rm -rf $cur_dir/$dir_track_repo
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
     
     echo "New branch : $fNew created successfully and baselined to : $fBase branch"

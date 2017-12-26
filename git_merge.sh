@@ -95,6 +95,7 @@ base_branch()
       then
         echo "Sorry! You cannot push any more changes to $fBase branch. This branch is already in production and no more changes to this branch will be acknowledged."
         rm $cur_dir/temp_merge.conf &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     fi
     if [[ $flag_live = "false" ]]
@@ -199,6 +200,7 @@ merge()
             echo "Resolve the conflicts manually, update push.conf with merge branch and do git push"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         elif [[ $fConf = "2" ]]
           then
@@ -207,6 +209,7 @@ merge()
             echo "Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -220,6 +223,7 @@ merge()
             echo "There is nothing to merge and no difference between branch $fBase and $fNew"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
@@ -227,6 +231,7 @@ merge()
             printf "Please re-baseline $fNew branch. $fBase branch is ahead of $fNew branch!\nPlease consult $cur_dir/${fBase}_diff_${fNew}.txt file.\n"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         fi
     elif [[ $merge_var == "" ]]
@@ -242,6 +247,7 @@ merge()
             echo "Auto-merging stopped before committing as requested!"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -260,6 +266,7 @@ merge()
             echo "Auto-merging stopped before committing as requested!"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
             echo "Wrong input! Please try again"
@@ -269,6 +276,7 @@ merge()
         echo -e "Merge failure - Please find the error below\n\n*****ERROR****\n\n$merge_var"
         rm $cur_dir/temp_merge.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     fi
 }
@@ -414,7 +422,8 @@ if [[ $fResp = "1" ]]
     git commit -m "Merged branch $fNew into $fBase branch" &> /dev/null
     echo "Updated ${dir_repo}_tracker.csv"
     git_push master
-
+    cd ..
+    rm -rf $cur_dir/$dir_track_repo &> /dev/null
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
 elif [[ $fResp = "2" ]]
   then
