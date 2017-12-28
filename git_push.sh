@@ -6,7 +6,7 @@ module_list=""
 branch=""
 flag_merge="false"
 
-while IFS="|"  read -r fDir fNew ;
+while IFS="|"  read -r fDir ;
 do
 dir_repo=`echo $fDir | awk -F '[/]' '{print $(NF)}'`
 
@@ -33,6 +33,7 @@ repo_dir()
 
 merge_branch()
 {
+    fNew=`git name-rev --name-only MERGE_HEAD`
     if [[ $fNew = "" ]] || [[ $flag_new = "invalid" ]]
           then
             echo "Merge branch :"
@@ -188,9 +189,9 @@ validate()
 
 download_tracker()
 {
-    cd $fDir
+    cd $fDir &> /dev/null
     fBranch=`git rev-parse --abbrev-ref HEAD`
-    cd $cur_dir
+    cd $cur_dir &> /dev/null
     awk '{if(NR>1)print}' $cur_dir/tracker.conf > $cur_dir/temp_tracker.conf
     while IFS="|"  read -r fTrack_URL fTrack_Path ;
     do

@@ -16,13 +16,13 @@ repo_dir()
     if [[ ${#fDir} -eq 0 ]]
       then
         flag_dir="invalid"
-        echo "Invalid directory! Please try again"
+        echo -e "ERROR : Invalid directory!\nPlease try again"
         repo_dir
     fi
     cd $fDir 2> /dev/null && flag_dir="valid" || flag_dir="invalid"  
     if [ $flag_dir == "invalid" ]
       then
-        echo "Invalid directory! Please try again"
+        echo -e "ERROR : Invalid directory!\nPlease try again"
         repo_dir
     fi
 }
@@ -41,7 +41,7 @@ download_tracker()
         if [[ ${#fTrack_URL} -eq 0 ]]
           then
             flag_tracker="invalid"
-            echo "Invalid URL! Please try again"
+            echo -e "ERROR : Invalid URL!\nPlease try again"
             download_tracker
         fi
         git clone $fTrack_URL &> /dev/null
@@ -51,18 +51,14 @@ download_tracker()
         cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
         if [ $flag_tracker == "invalid" ]
           then
-            echo "Invalid URL for tracker! Please try again"
+            echo -e "ERROR : Invalid URL for tracker!\nPlease try again"
             download_tracker
         fi
         git fetch &> /dev/null
         git checkout origin/master -- $fTrack_Path${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
         if [[ $flag_repo_tracker == "invalid" ]]
           then
-            #echo "Sorry! ${dir_repo}_tracker.csv file is not available in remote repository hence you cannot merge $fNew branch into $fBase branch. Please investigate URL - $fTrack_URL and try again."
-            #rm $cur_dir/temp_tracker.conf &> /dev/null
-            #rm $cur_dir/temp_merge.conf &> /dev/null
-            #exit
-            echo "Sorry! ${dir_repo}_tracker.csv file is not available. Please try again"
+            echo -e "ERROR : ${dir_repo}_tracker.csv file is not available.\nPlease try again"
             download_tracker
         else
             mv ${dir_repo}_tracker.csv $cur_dir/
@@ -93,7 +89,7 @@ base_branch()
 
     if [[ $flag_prod = "true" ]]
       then
-        echo "Sorry! You cannot push any more changes to $fBase branch. This branch is already in production and no more changes to this branch will be acknowledged."
+        echo -e "EXIT !\nREASON : This branch ($fBase branch) is already in production and no more changes to this branch will be acknowledged."
         rm $cur_dir/temp_merge.conf &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
@@ -103,7 +99,7 @@ base_branch()
       then
         flag="valid"
     else
-        echo -e "You are about to merge $fNew branch to $fBase branch. $fBase is the live branch hence please confirm the changes made as part of $fNew branch is in production. \n\nFor Yes, Press 1\nFor No, Press 2"
+        echo -e "INFO : $fBase is the live branch and you are about to merge $fNew branch to $fBase branch.\nPlease confirm the changes made as part of $fNew branch is in production. \n\nFor Yes, Press 1\nFor No, Press 2"
         read fMaster < /dev/tty
         if [[ $fMaster = "1" ]]
           then
@@ -112,7 +108,7 @@ base_branch()
           then
             flag="invalid"
         else
-            echo "Wrong input! Please try again"
+            echo -e "ERROR : Wrong input!\nPlease try again"
             base_branch
         fi
     fi        
@@ -122,7 +118,7 @@ base_branch()
         git checkout $fBase &> /dev/null
         git pull origin $fBase &> /dev/null
     else
-        echo "Invalid base branch. Please try again!"
+        echo -e "ERROR : Invalid base branch.\nPlease try again!"
         base_branch
     fi
 }
@@ -155,11 +151,11 @@ rebase_branch ()
               then
                 flag="invalid"
             else
-                echo "Wrong input! Please try again"
+                echo -e "ERROR : Wrong input!\nPlease try again"
                 base_branch
             fi
         else
-            echo "Wrong input! Please try again"
+            echo -e "ERROR : Wrong input!\nPlease try again"
             base_branch
         fi
     fi
@@ -183,7 +179,7 @@ merge_branch()
         git checkout $fNew &> /dev/null
         git pull origin $fNew &> /dev/null
     else
-        echo "Invalid branch name. Please try again"
+        echo -e "ERROR : Invalid branch name.\nPlease try again"
         merge_branch
     fi
 }
@@ -193,12 +189,12 @@ merge()
     merge_var=$(git merge $fNew --no-commit --no-ff; git merge --abort 2>&1) 
     if [[ $merge_var == *"CONFLICT"* ]]
       then
-        echo -e "There are merge conflicts. Do you want to continue merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+        echo -e "MERGE PREVIEW : Conflicts recorded.\nDo you want to continue merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fConf < /dev/tty
         if [[ $fConf = "1" ]]
           then
             git merge $fNew &> /dev/null
-            echo "Resolve the conflicts manually, update push.conf with merge branch and do git push"
+            echo -e "EXIT !\nREASON : Conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do git push."
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
@@ -208,14 +204,14 @@ merge()
           then
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
             git diff $fNew >> $cur_dir/${fBase}_diff_${fNew}.txt
-            echo "Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
+            echo -e "EXIT !\nREASON : Merge stopped as requested!\nRECOMMENDED : Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
             rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
         else
-            echo "Wrong input! Please try again"
+            echo -e "ERROR : Wrong input!\nPlease try again"
             merge
         fi
     elif [[ $merge_var == *"There is no merge to abort"* ]]
@@ -223,7 +219,7 @@ merge()
         git_diff=$(git diff $fNew)
         if [[ ${#git_diff} -eq 0 ]]
           then
-            echo "There is nothing to merge and no difference between branch $fBase and $fNew"
+            echo "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
@@ -232,7 +228,7 @@ merge()
         else
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
             echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
-            printf "Please re-baseline $fNew branch. $fBase branch is ahead of $fNew branch!\nPlease consult $cur_dir/${fBase}_diff_${fNew}.txt file.\n"
+            printf "EXIT !\nREASON : $fBase branch is ahead of $fNew branch!\nRECOMMENDED : Please re-baseline $fNew branch i.e., Merge $fBase branch into $fNew branch.\nPlease consult $cur_dir/${fBase}_diff_${fNew}.txt file for the differences.\n"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
@@ -241,7 +237,7 @@ merge()
         fi
     elif [[ $merge_var == "" ]]
       then
-        echo -e "Do you want to continue with automerging $fNew branch to $fBase branch and code push to remote repository? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+        echo -e "MERGE PREVIEW : Automerge would be successful.\nDo you want to continue automerging $fNew branch to $fBase branch and code push to remote repository? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fMerge < /dev/tty
         if [[ $fMerge = "1" ]]
           then
@@ -249,19 +245,19 @@ merge()
             code_push
         elif [[ $fMerge = "2" ]]
           then
-            echo "Auto-merging stopped before committing as requested!"
+            echo -e "EXIT !\nREASON : Auto-merging stopped before committing as requested!"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
             rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
         else
-            echo "Wrong input! Please try again"
+            echo -e "ERROR : Wrong input!\nPlease try again"
             merge
         fi
     elif [[ $merge_var == *"Removing"* ]]
       then
-        echo -e $merge_var " - Do you want to continue removing the files from $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+        echo -e "MERGE PREVIEW : "$merge_var "\nDo you want to continue removing the files from $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fRemove < /dev/tty
         if [[ $fRemove = "1" ]]
           then
@@ -269,18 +265,18 @@ merge()
             code_push
         elif [[ $fRemove = "2" ]]
           then
-            echo "Auto-merging stopped before committing as requested!"
+            echo "EXIT !\nREASON : Auto-merging stopped before committing as requested!"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
             rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
         else
-            echo "Wrong input! Please try again"
+            echo -e "ERROR : Wrong input!\nPlease try again"
             merge
         fi
     else
-        echo -e "Merge failure - Please find the error below\n\n*****ERROR****\n\n$merge_var"
+        echo -e "EXIT !\nREASON :  Merge failure. Unknown Error.\nRECOMMENDED : Please investigate with the below stacktrace and re-try.\n\n********ERROR********\n\n$merge_var"
         rm $cur_dir/temp_merge.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
@@ -294,7 +290,7 @@ code_push()
     git push origin $fBase &> /dev/null && flag_merge="success" || flag_merge="failed"
     if [[ $flag_merge = "success" ]]
       then
-        echo "Code merge success! $fNew branch is merged to $fBase branch and pushed to remote repository"
+        echo -e "SUCCESS!\nINFO : $fNew branch is merged to $fBase branch and pushed to remote repository"
         updated_email=`git config user.email`
         updated_username=`git config user.name`
         commit_details=`git rev-parse --verify $fBase`
@@ -314,7 +310,7 @@ code_push()
             rebase_email $fBase
         fi
     else
-        echo "Wrong git credentials! Code push failed! Please try again"
+        echo -e "ERROR : Code push failed! Wrong git credentials!\nPlease try again"
         code_push
     fi
 }
@@ -329,7 +325,7 @@ repo_clone()
     if [[ ${#fURL} -eq 0 ]]
       then
         flag_repo="invalid"
-        echo "Invalid URL! Please try again"
+        echo -e "ERROR : Invalid URL! \nPlease try again"
         repo_clone
     fi
  
@@ -338,7 +334,7 @@ repo_clone()
     cd $dir_repo &> /dev/null && flag_repo="valid" || flag_repo="invalid"
     if [ $flag_repo == "invalid" ]
       then
-        echo "Invalid URL! Please try again"
+        echo -e "ERROR : Invalid URL! \nPlease try again"
         repo_clone
     fi
 }
@@ -407,12 +403,12 @@ git_push()
       then
         if [[ $flag_tracker_push = "true" ]]
           then
-            echo "Updated ${dir_repo}_tracker.csv"
+            echo -e "INFO : Updated ${dir_repo}_tracker.csv"
         else
-            echo "Changes pushed to remote $branch branch!"
+            echo -e "SUCCESS !\nINFO : Changes pushed to remote $branch branch!"
         fi
     else
-        echo "Wrong git credentials! Code push failed! Please try again"
+        echo -e "ERROR : Code push failed! Wrong git credentials!\nPlease try again"
         git_push $branch
     fi
 }
@@ -443,7 +439,7 @@ elif [[ $fResp = "2" ]]
   then
     echo "Thank you! Have a nice day"
 else
-    echo "Wrong input"
+    echo -e "ERROR : Wrong input!\nPlease try again"
     ./git_merge.sh
 fi
 done < temp_merge.conf
