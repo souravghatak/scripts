@@ -405,7 +405,7 @@ git_push()
           then
             echo -e "INFO : Updated ${dir_repo}_tracker.csv"
         else
-            echo -e "SUCCESS !\nINFO : Changes pushed to remote $branch branch!"
+            echo -e "SUCCESS!\nINFO : Changes pushed to remote $branch branch!"
         fi
     else
         echo -e "ERROR : Code push failed! Wrong git credentials!\nPlease try again"

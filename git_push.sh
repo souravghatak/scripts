@@ -1,10 +1,19 @@
 #!/bin/sh
 
 awk '{if(NR>1)print}' push.conf > temp_push.conf
+awk '{if(NR>1)print}' merge.conf > temp_merge.conf
 cur_dir=`pwd`
 module_list=""
 branch=""
 flag_merge="false"
+
+#while IFS="|"  read -r _ _ fNew _ ;
+#do
+#echo $fNew
+#done < temp_merge.conf
+fNew=`cut -d'|' -f3 < temp_merge.conf`
+rm $cur_dir/temp_merge.conf &> /dev/null
+
 
 while IFS="|"  read -r fDir ;
 do
@@ -20,20 +29,21 @@ repo_dir()
     if [[ ${#fDir} -eq 0 ]]
       then
         flag_dir="invalid"
-        echo "Invalid directory! Please try again"
+        echo -e "ERROR : Invalid directory!\nPlease try again"
         repo_dir
     fi
     cd $fDir 2> /dev/null && flag_dir="valid" || flag_dir="invalid"
     if [ $flag_dir == "invalid" ]
       then
-        echo "Invalid directory! Please try again"
+        echo -e "ERROR : Invalid directory!\nPlease try again"
         repo_dir
     fi
 }
 
 merge_branch()
 {
-    fNew=`git name-rev --name-only MERGE_HEAD`
+    #fNew=`git name-rev --name-only MERGE_HEAD`
+    echo "Merge branch - $fNew"
     if [[ $fNew = "" ]] || [[ $flag_new = "invalid" ]]
           then
             echo "Merge branch :"
@@ -46,18 +56,18 @@ merge_branch()
     fi
     if [ $flag_new = "invalid" ]
           then
-            echo "Invalid merge branch! Please try again"
+            echo -e "ERROR : Invalid merge branch!\nPlease try again"
             merge_branch
     else
         echo -e "Please confirm if merge conflicts recorded for merging $fNew branch to $fBranch branch are manually resolved? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fConflict < /dev/tty
         if [[ $fConflict = "1" ]]
           then
-            echo "Merging $fNew branch to $fBranch branch"
+            echo -e "INFO : Merging $fNew branch to $fBranch branch"
             flag_merge="true"
         elif [[ $fConflict = "2" ]]
           then
-            echo "Resolve the conflicts manually and try git push"
+            echo -e "EXIT !\nREASON : Merge conflicts not resolved.\nRECOMMENDED : Resolve the conflicts manually and try git commit & push."
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
@@ -72,7 +82,7 @@ merge_branch()
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
-            echo "Wrong input! Please try again"
+            echo -e "ERROR : Wrong input!\nPlease try again"
             list_of_files
         fi
     fi
@@ -98,7 +108,7 @@ list_of_files()
 
     if [[ $deleted_files1 != "" ]]
       then
-        echo -e "Removed $deleted_files1 from branch $fNew . Do you want to continue removing these files from $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+        echo -e "INFO : Deleted $deleted_files1 from branch $fNew .\nDo you want to continue removing these files from $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fDel < /dev/tty
         if [[ $fDel = "1" ]]
           then
@@ -107,7 +117,7 @@ list_of_files()
             deleted_files1=""
         elif [[ $fDel = "2" ]]
           then
-            echo "Not removing $deleted_files1 from $fBranch branch"
+            echo -e "INFO : Not removing $deleted_files1 from $fBranch branch as requested."
         elif [[ $fDel = "9" ]]
           then
             echo "Thank you! Have a nice day."
@@ -117,18 +127,18 @@ list_of_files()
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
-            echo "Wrong input! Please try again"
+            echo -e "ERROR : Wrong input!\nPlease try again"
             list_of_files
         fi
     fi
 
     if [[ $deleted_files2 != "" ]]
       then
-        echo -e "Removed $deleted_files2 from branch $fBranch . Do you want to continue adding these files to $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+        echo -e "INFO : Removed $deleted_files2 from branch $fBranch .\nDo you want to continue adding these files to $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fDel1 < /dev/tty
         if [[ $fDel1 = "1" ]]
           then
-            echo "Adding $deleted_files2 to $fBranch branch"
+            echo -e "INFO : Adding $deleted_files2 to $fBranch branch as requested."
             added_files+=" "$deleted_files2
         elif [[ $fDel1 = "2" ]]
           then
@@ -143,32 +153,38 @@ list_of_files()
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         else
-            echo "Wrong input! Please try again"
+            echo -e "ERROR : Wrong input!\nPlease try again"
             list_of_files
         fi
     fi    
     
     if [[ $deleted_files = "" ]] && [[ $modified_files = "" ]] && [[ $added_files = "" ]]
       then
-        echo "No files changed to commit. Thank you"
+        echo -e "EXIT !\nREASON : No files changed to commit. Thank you"
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     else 
-        echo "Please find the list of files (Deleted/Modified/Added)"
+        echo "Please find the list of changed files (Deleted/Modified/Added)"
         if [[ $deleted_files != "" ]]
           then
             printf "\nDeleted:\n$deleted_files\n"
+        else
+            printf "\nDeleted: -\n"
         fi
         if [[ $modified_files != "" ]]
           then
             printf "\nModified:\n$modified_files\n"
+        else
+            printf "\nModified: -\n"
         fi
         if [[ $added_files != "" ]]
           then
             printf "\nAdded:\n$added_files\n"
+        else
+            printf "\nAdded: -\n"
         fi
     fi
     if [[ $flag_merge = "true" ]]
@@ -203,16 +219,16 @@ download_tracker()
         if [[ ${#fTrack_URL} -eq 0 ]]
           then
             flag_tracker="invalid"
-            echo "Invalid URL! Please try again"
+            echo -e "ERROR : Invalid URL for tracker!\nPlease try again"
             download_tracker
         fi
-        echo "Downloading updated repository for tracker"
+        #echo -e "INFO : Downloading updated repository for tracker"
         git clone $fTrack_URL &> /dev/null
         dir_track_repo=`echo $fTrack_URL | awk -F '[/.]' '{print $(NF-1)}'`
         cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
         if [ $flag_tracker == "invalid" ]
           then
-            echo "Invalid URL for tracker! Please try again"
+            echo -e "ERROR : Invalid URL for tracker!\nPlease try again"
             download_tracker
         fi
 
@@ -220,7 +236,7 @@ download_tracker()
         git checkout origin/master -- $fTrack_Path${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
         if [ $flag_repo_tracker == "invalid" ]
           then
-            echo "Sorry! ${dir_repo}_tracker.csv file is not available in remote repository hence you cannot push any changes to $fBranch branch. Please investigate URL - $fTrack_URL and try again."
+            echo -e "EXIT !\nREASON : ${dir_repo}_tracker.csv file is not available in $fTrack_URL .\nRECOMMENDED : Please investigate the URL for tracker - $fTrack_URL and try again."
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm $cur_dir/temp_tracker.conf &> /dev/null
@@ -242,14 +258,15 @@ git_add()
     live=`awk -v var1=$fBranch 'BEGIN {FS = ", "}; {if ($13 == var1) {print $13}}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
     sys_owner=`awk -v var1=$fBranch 'BEGIN {FS = ", "}; {if ($13 == var1) {print $8}}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
     updated_username=`git config user.name`
-
+    echo "System owner - $sys_owner"
     [[ $live =~ (^|[[:space:]])"$fBranch"($|[[:space:]]) ]] && flag_live="true" || flag_live="false"
     [[ $fProd_branch =~ (^|[[:space:]])"$fBranch"($|[[:space:]]) ]] && flag_prod="true" || flag_prod="false"
     [[ $sys_owner =~ (^|[[:space:]])"$updated_username"($|[[:space:]]) ]] && flag_user="true" || flag_user="false"
-    
+    echo "Flag user - $flag_user"
+
     if [[ $flag_live = "true" && $flag_merge = "false" ]]
       then
-        echo "Sorry! You cannot push changes directly to $fBranch branch as this is a live / production branch. You can only merge branches to $fBranch branch."
+        echo -e "EXIT !\nREASON : Code push (Direct) to $fBranch branch is not allowed as this is a live / production branch.\nRECOMMENDED : Please consult your system owner."
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
@@ -257,31 +274,49 @@ git_add()
         exit
     elif [[ $flag_live = "true" && $flag_user = "false" ]]
       then
-        echo "Sorry! You cannot push changes directly to $fBranch branch as this is a live / production branch. You can only merge branches to $fBranch branch when there are no merge conflicts. If it's really required, please consult your system owner."
+        echo -e "EXIT !\nREASON : Code push (Merge conflict) to $fBranch branch is not allowed as this is a live / production branch.\nRECOMMENDED : Please consult your system owner."
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
+    elif [[ $flag_live = "true" && $flag_user = "true" && $flag_merge = "true" ]]
+      then
+        echo -e "INFO : System owner have permission to code push (Merge conflict) to $fBranch branch as this is a live / production branch.\nDo you want to continue? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+        read fPermission < /dev/tty
+        if [[ $fPermission = "1" ]]
+          then
+            echo
+        elif [[ $fPermission = "2" ]]
+          then
+            rm $cur_dir/temp_push.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
+            exit
+        else
+            echo -e "ERROR : Wrong input!\nPlease try again."
+            git_add
+        fi
     fi
     
     if [[ $flag_prod = "true" ]]
       then
-        echo "Sorry! You cannot push any more changes to $fBranch branch. This branch is already in production and no more changes to this branch will be acknowledged."
+        echo -e "EXIT !\nREASON : $fBranch branch is already in production and no more changes to this branch will be acknowledged.\nRECOMMENDED : Please consult your system owner."
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     fi
-    echo -e "Do you want to push all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+    echo -e "Do you want to add & commit all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
     read fFile < /dev/tty
     if [[ $fFile = "1" ]]
       then
         git add $module_list &> /dev/null
     elif [[ $fFile = "2" ]]
       then
-        echo "Please specify the file names below (space separated)"
+        echo -e "Please specify the file names below (space separated)"
         read module_list < /dev/tty
         git add $module_list &> /dev/null
     elif [[ $fFile = "9" ]]
@@ -293,7 +328,7 @@ git_add()
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     else
-        echo "Wrong input! Please try again"
+        echo -e "ERROR : Wrong input!\nPlease try again"
         git_add
     fi  
 }
@@ -308,7 +343,7 @@ git_commit()
         read fCommit < /dev/tty
         if [[ ${#fCommit} -eq 0 ]]
           then
-            echo "Commit message cannot be empty! Please try again."
+            echo -e "ERROR : Commit message cannot be empty!\nPlease try again."
             git_commit
         fi
         git commit -m "$fCommit" &> /dev/null
@@ -318,14 +353,14 @@ git_commit()
 git_push_decide()
 {
     fBranch=`git rev-parse --abbrev-ref HEAD`
-    echo -e "Git commit successful for $fBranch branch! Do you want to push the changes to remote repository? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+    echo -e "SUCCESS!\nINFO : Git add & commit successful for $fBranch branch BUT not yet pushed to remote repository!\nDo you want to push the changes to remote repository? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
     read fPush < /dev/tty
     if [[ $fPush = "1" ]]
       then
         git_push $fBranch
     elif [[ $fPush = "2" ]]
       then
-        echo "Code push to remote is stopped as requested. Changes are committed locally in $fDir directory"
+        echo -e "EXIT !\nREASON : Code push to remote repository is stopped as requested. Changes are committed locally in $fDir directory"
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
@@ -340,7 +375,7 @@ git_push_decide()
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     else
-        echo "Wrong input! Please try again"
+        echo -e "ERROR : Wrong input!\nPlease try again"
         git_push_decide 
     fi
 }
@@ -353,12 +388,12 @@ git_push()
       then
         if [[ $flag_tracker_push = "true" ]]
           then
-            echo "Updated ${dir_repo}_tracker.csv" 
+            echo -e "INFO : Updated ${dir_repo}_tracker.csv" 
         else
-            echo "Changes pushed to remote $branch branch!"
+            echo -e "SUCCESS!\nINFO : Changes pushed to remote $branch branch!"
         fi
     else
-        echo "Wrong git credentials! Code push failed! Please try again"
+        echo -e "ERROR : Code push failed! Wrong git credentials! \nPlease try again"
         git_push $branch
     fi
 }
@@ -445,7 +480,6 @@ if [[ $flag_merge = "true" ]]
 else
     git commit -m "Code push to $branch branch" &> /dev/null
 fi
-#echo "Updated ${dir_repo}_tracker.csv"
 flag_tracker_push="true"
 git_push master
 cd ..
