@@ -6,11 +6,6 @@ cur_dir=`pwd`
 module_list=""
 branch=""
 flag_merge="false"
-
-#while IFS="|"  read -r _ _ fNew _ ;
-#do
-#echo $fNew
-#done < temp_merge.conf
 fNew=`cut -d'|' -f3 < temp_merge.conf`
 rm $cur_dir/temp_merge.conf &> /dev/null
 
@@ -42,7 +37,6 @@ repo_dir()
 
 merge_branch()
 {
-    #fNew=`git name-rev --name-only MERGE_HEAD`
     echo "Merge branch - $fNew"
     if [[ $fNew = "" ]] || [[ $flag_new = "invalid" ]]
           then
@@ -59,7 +53,7 @@ merge_branch()
             echo -e "ERROR : Invalid merge branch!\nPlease try again"
             merge_branch
     else
-        echo -e "Please confirm if merge conflicts recorded for merging $fNew branch to $fBranch branch are manually resolved? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+        echo -e "WARNING : Please confirm if merge conflicts recorded for merging $fNew branch to $fBranch branch are manually resolved? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fConflict < /dev/tty
         if [[ $fConflict = "1" ]]
           then
@@ -108,7 +102,7 @@ list_of_files()
 
     if [[ $deleted_files1 != "" ]]
       then
-        echo -e "INFO : Deleted $deleted_files1 from branch $fNew .\nDo you want to continue removing these files from $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+        echo -e "WARNING : Deleted $deleted_files1 from branch $fNew .\nDo you want to continue removing these files from $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fDel < /dev/tty
         if [[ $fDel = "1" ]]
           then
@@ -134,7 +128,7 @@ list_of_files()
 
     if [[ $deleted_files2 != "" ]]
       then
-        echo -e "INFO : Removed $deleted_files2 from branch $fBranch .\nDo you want to continue adding these files to $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+        echo -e "WARNING : Removed $deleted_files2 from branch $fBranch .\nDo you want to continue adding these files to $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fDel1 < /dev/tty
         if [[ $fDel1 = "1" ]]
           then
@@ -256,14 +250,23 @@ git_add()
     fBranch=`git rev-parse --abbrev-ref HEAD`
     fProd_branch=`awk 'BEGIN {FS = ", "}; {if ($7 == "In-Production") {print $3}}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
     live=`awk -v var1=$fBranch 'BEGIN {FS = ", "}; {if ($13 == var1) {print $13}}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
-    sys_owner=`awk -v var1=$fBranch 'BEGIN {FS = ", "}; {if ($13 == var1) {print $8}}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
     updated_username=`git config user.name`
-    echo "System owner - $sys_owner"
+    
     [[ $live =~ (^|[[:space:]])"$fBranch"($|[[:space:]]) ]] && flag_live="true" || flag_live="false"
     [[ $fProd_branch =~ (^|[[:space:]])"$fBranch"($|[[:space:]]) ]] && flag_prod="true" || flag_prod="false"
-    [[ $sys_owner =~ (^|[[:space:]])"$updated_username"($|[[:space:]]) ]] && flag_user="true" || flag_user="false"
-    echo "Flag user - $flag_user"
+    
+    if [[ $flag_live = "true" && $flag_merge = "true" ]]
+      then
+        sys_owner=`awk -v var1=$fNew 'BEGIN {FS = ", "}; {if ($3 == var1) {print $8}}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    elif [[ $flag_prod = "true" ]]
+      then
+        sys_owner=`awk -v var1=$fBranch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $8}}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    else
+        sys_owner=`awk -v var1=$fBranch 'BEGIN {FS = ", "};  {print $8}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
+    fi
 
+    [[ $sys_owner =~ (^|[[:space:]])"$updated_username"($|[[:space:]]) ]] && flag_user="true" || flag_user="false"
+    
     if [[ $flag_live = "true" && $flag_merge = "false" ]]
       then
         echo -e "EXIT !\nREASON : Code push (Direct) to $fBranch branch is not allowed as this is a live / production branch.\nRECOMMENDED : Please consult your system owner."
@@ -282,7 +285,7 @@ git_add()
         exit
     elif [[ $flag_live = "true" && $flag_user = "true" && $flag_merge = "true" ]]
       then
-        echo -e "INFO : System owner have permission to code push (Merge conflict) to $fBranch branch as this is a live / production branch.\nDo you want to continue? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+        echo -e "WARNING : System owner have permission to code push (Merge conflict) to $fBranch branch as this is a live / production branch.\nDo you want to continue? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fPermission < /dev/tty
         if [[ $fPermission = "1" ]]
           then
@@ -300,7 +303,7 @@ git_add()
         fi
     fi
     
-    if [[ $flag_prod = "true" ]]
+    if [[ $flag_prod = "true" && $flag_user = "false" ]]
       then
         echo -e "EXIT !\nREASON : $fBranch branch is already in production and no more changes to this branch will be acknowledged.\nRECOMMENDED : Please consult your system owner."
         rm $cur_dir/temp_push.conf &> /dev/null
@@ -308,6 +311,24 @@ git_add()
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
+    elif  [[ $flag_prod = "true" && $flag_user = "true" ]]
+      then
+        echo -e "WARNING : $fBranch branch is deployed in production. System owner have permission to code push to $fBranch branch.\nDo you want to continue? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+        read fPermission1 < /dev/tty
+        if [[ $fPermission1 = "1" ]]
+          then
+            echo
+        elif [[ $fPermission1 = "2" ]]
+          then
+            rm $cur_dir/temp_push.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
+            exit
+        else
+            echo -e "ERROR : Wrong input!\nPlease try again."
+            git_add
+        fi
     fi
     echo -e "Do you want to add & commit all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
     read fFile < /dev/tty

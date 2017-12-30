@@ -99,7 +99,7 @@ base_branch()
       then
         flag="valid"
     else
-        echo -e "INFO : $fBase is the live branch and you are about to merge $fNew branch to $fBase branch.\nPlease confirm the changes made as part of $fNew branch is in production. \n\nFor Yes, Press 1\nFor No, Press 2"
+        echo -e "WARNING : $fBase is the live branch and you are about to merge $fNew branch to $fBase branch.\nPlease confirm the changes made as part of $fNew branch is in production. \n\nFor Yes, Press 1\nFor No, Press 2"
         read fMaster < /dev/tty
         if [[ $fMaster = "1" ]]
           then
@@ -189,7 +189,7 @@ merge()
     merge_var=$(git merge $fNew --no-commit --no-ff; git merge --abort 2>&1) 
     if [[ $merge_var == *"CONFLICT"* ]]
       then
-        echo -e "MERGE PREVIEW : Conflicts recorded.\nDo you want to continue merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+        echo -e "WARNING : Merge Preview - Conflicts recorded.\nDo you want to continue merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fConf < /dev/tty
         if [[ $fConf = "1" ]]
           then
@@ -237,7 +237,7 @@ merge()
         fi
     elif [[ $merge_var == "" ]]
       then
-        echo -e "MERGE PREVIEW : Automerge would be successful.\nDo you want to continue automerging $fNew branch to $fBase branch and code push to remote repository? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+        echo -e "WARNING : Merge Preview - Automerge would be successful.\nDo you want to continue automerging $fNew branch to $fBase branch and code push to remote repository? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fMerge < /dev/tty
         if [[ $fMerge = "1" ]]
           then
@@ -257,7 +257,7 @@ merge()
         fi
     elif [[ $merge_var == *"Removing"* ]]
       then
-        echo -e "MERGE PREVIEW : "$merge_var "\nDo you want to continue removing the files from $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+        echo -e "WARNING : Merge Preview - "$merge_var "\nDo you want to continue removing the files from $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
         read fRemove < /dev/tty
         if [[ $fRemove = "1" ]]
           then
