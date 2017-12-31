@@ -17,13 +17,13 @@ repo_dir()
     if [[ ${#fDir} -eq 0 ]]
       then
         flag_dir="invalid"
-        echo "Invalid directory! Please try again"
+        echo -e "ERROR : Invalid directory!\nPlease try again"
         repo_dir
     fi
     cd $fDir &> /dev/null && flag_dir="valid" || flag_dir="invalid"
     if [ $flag_dir == "invalid" ]
       then
-        echo "Invalid directory! Please try again"
+        echo -e "ERROR : Invalid directory!\nPlease try again"
         repo_dir
     fi
 }
@@ -46,7 +46,7 @@ base_branch()
         git checkout $fBase &> /dev/null
         git pull origin $fBase &> /dev/null
     else
-        echo "Invalid base branch. Please try again!"
+        echo -e "ERROR : Invalid base branch.\nPlease try again!"
         base_branch
     fi
 }
@@ -65,7 +65,7 @@ live_branch()
     fi
     if [ $flag_live != "valid" ]
       then
-        echo "Invalid live branch. Please try again!"
+        echo -e "ERROR : Invalid live branch.\nPlease try again!"
         live_branch
     fi
 }
@@ -87,7 +87,7 @@ new_branch()
       then
         git checkout -b $fNew &> /dev/null
     else
-        echo "Branch $fNew already exists or invalid branch name. Please provide a different branch name and try again"
+        echo -e "ERROR : Branch $fNew already exists or invalid branch name.\nPlease provide a different branch name and try again"
         new_branch
     fi
 }
@@ -99,7 +99,7 @@ code_push()
       then
         echo         
     else
-        echo "Wrong git credentials! Code push failed! Please try again"
+        echo -e "ERROR : Code push failed! Wrong git credentials!\nPlease try again"
         code_push $1
     fi
 }
@@ -115,7 +115,7 @@ repo_clone()
     if [[ ${#fURL} -eq 0 ]]
       then
         flag_repo="invalid"
-        echo "Invalid URL! Please try again"
+        echo -e "ERROR : Invalid URL!\nPlease try again"
         repo_clone
     fi
     git clone $fURL &> /dev/null 
@@ -123,7 +123,7 @@ repo_clone()
     cd $dir_repo &> /dev/null && flag_repo="valid" || flag_repo="invalid"
     if [ $flag_repo == "invalid" ]
       then
-        echo "Invalid URL! Please try again"
+        echo -e "ERROR : Invalid URL!\nPlease try again"
         repo_clone
     fi
 }
@@ -149,7 +149,7 @@ download_tracker()
         if [[ ${#fTrack_URL} -eq 0 ]]
           then
             flag_tracker="invalid"
-            echo "Invalid URL! Please try again"
+            echo -e "ERROR : Invalid URL for tracker!\nPlease try again"
             download_tracker
         fi
         cd $cur_dir 
@@ -158,7 +158,7 @@ download_tracker()
         cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
         if [ $flag_tracker == "invalid" ]
           then
-            echo "Invalid URL for tracker! Please try again"
+            echo -e "ERROR : Invalid URL for tracker!\nPlease try again"
             download_tracker
         fi
 
@@ -166,7 +166,7 @@ download_tracker()
         git checkout origin/master -- $fTrack_Path${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
         if [ $flag_repo_tracker == "invalid" ]
           then
-            echo "${dir_repo}_tracker.csv file is not available in remote repository.Creating new ${dir_repo}_tracker.csv file."
+            echo -e "WARNING : ${dir_repo}_tracker.csv file is not available in remote repository.\nCreating new ${dir_repo}_tracker.csv file."
         else
             mv ${dir_repo}_tracker.csv $cur_dir/
             git reset HEAD ${dir_repo}_tracker.csv &> /dev/null
@@ -200,18 +200,18 @@ if [[ $fResp = "1" ]]
     mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
     git add ${dir_repo}_tracker.csv &> /dev/null
     git commit -m "Created new branch : $fNew" &> /dev/null
-    echo "Updated ${dir_repo}_tracker.csv"
+    echo -e "INFO : Updated ${dir_repo}_tracker.csv"
     code_push master
     cd ..
     rm -rf $cur_dir/$dir_track_repo
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
     
-    echo "New branch : $fNew created successfully and baselined to : $fBase branch"
+    echo -e "SUCCESS!\nINFO : New branch : $fNew created successfully and baselined to : $fBase branch"
 elif [[ $fResp = "2" ]]
   then
-    echo "Update create.conf with the required inputs and try again"
+    echo -e "EXIT !\nREASON : Branch creation stopped as requested.\nRECOMMENDED : Update create.conf with the required inputs and try again"
 else
-    echo "Wrong input"
+    echo -e "ERROR : Wrong input.\nPlease try again."
     ./git_create.sh
 fi
 done < temp_create.conf
