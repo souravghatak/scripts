@@ -45,10 +45,9 @@ download_tracker()
             download_tracker
         fi
         git clone $fTrack_URL &> /dev/null
-        #echo $fTrack_URL
         dir_track_repo=`echo $fTrack_URL | awk -F '[/.]' '{print $(NF-1)}'`
-        #echo $dir_track_repo
         cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
+        
         if [ $flag_tracker == "invalid" ]
           then
             echo -e "ERROR : Invalid URL for tracker!\nPlease try again"
@@ -219,7 +218,7 @@ merge()
         git_diff=$(git diff $fNew)
         if [[ ${#git_diff} -eq 0 ]]
           then
-            echo "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew"
+            echo -e "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
