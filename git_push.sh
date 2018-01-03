@@ -444,6 +444,25 @@ tracker_update ()
     fi
 }
 
+automerge ()
+{
+    branch_list=`awk  'BEGIN {FS = "|"}; {print}' < $cur_dir/automerge.conf | awk -v RS="|" '1'`
+    ar=($branch_list)
+    [[ $branch_list =~ (^|[[:space:]])"$branch"($|[[:space:]]) ]] && automerge_branch="true" || automerge_branch="false"
+    if [[ $automerge_branch = "true" ]]
+      then
+        index=1; for i in "${ar[@]}"; do
+            [[ $i == "$branch" ]] && break
+            ((++index))
+        done
+        export index
+        cd $cur_dir
+        ./git_automerge.sh
+        cd -
+    fi
+}
+
+
 rebase_email ()
 {        
     if [[ $flag_merge = "true" ]]
@@ -491,6 +510,7 @@ git_commit
 git_push_decide
 tracker_update
 rebase_email
+automerge
 
 cd $cur_dir/$dir_track_repo
 mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null

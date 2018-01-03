@@ -227,7 +227,7 @@ merge()
         else
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
             echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
-            printf "EXIT !\nREASON : $fBase branch is ahead of $fNew branch!\nRECOMMENDED : Please re-baseline $fNew branch i.e., Merge $fBase branch into $fNew branch.\nPlease consult $cur_dir/${fBase}_diff_${fNew}.txt file for the differences.\n"
+            printf "EXIT !\nREASON : $fBase branch is ahead of $fNew branch!\nRECOMMENDED : $fBase branch is up-to-date with the changes of $fNew branch and NO merging required.\nPlease consult $cur_dir/${fBase}_diff_${fNew}.txt file for the differences.\n"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null

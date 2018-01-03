@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cur_dir=`pwd`
-branch_count=`head -1 automerge.conf | tr '|' '\n' | wc -l`
+branch_count=`head -1 $cur_dir/automerge.conf | tr '|' '\n' | wc -l`
 Dir="/home/sghatak/research/test/Repo1"
 validate()
 {
@@ -11,7 +11,7 @@ validate()
     echo $all_branches | grep -F -q -w "$1";
 }
 
-for (( j=1; j<=$((branch_count-1)); j++ ))
+for (( j=$((index)); j<=$((branch_count-1)); j++ ))
 do
     branch=`awk -v var=$j -v var2=$((j+1)) 'BEGIN {FS = "|"}; {print $var"|"$var2}' $cur_dir/automerge.conf`
     
