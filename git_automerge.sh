@@ -31,7 +31,7 @@ do
                 awk -v var1=$branch_name 'BEGIN {FS = "|"}; {OFS = "|"}; {if (FNR == 2) {$2 = var1}; { print }}' $cur_dir/merge1.conf > $cur_dir/merge2.conf
             fi
         else
-            echo "ERROR : Invalid branch - $branch_name"
+            echo -e "ERROR : Automerge aborted!\nREASON : Invalid branch - $branch_name in automerge.conf"
             mv $cur_dir/merge2.conf $cur_dir/merge.conf &> /dev/null
             rm $cur_dir/merge1.conf &> /dev/null
             rm $cur_dir/branches.txt &> /dev/null
@@ -44,5 +44,8 @@ do
     rm $cur_dir/branches.txt &> /dev/null
     rm $cur_dir/branches1.txt &> /dev/null
     cd $cur_dir
+    flag_auto="true"
+    export flag_auto
     ./git_merge.sh
+    exit 1
 done

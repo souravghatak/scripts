@@ -188,8 +188,13 @@ merge()
     merge_var=$(git merge $fNew --no-commit --no-ff; git merge --abort 2>&1) 
     if [[ $merge_var == *"CONFLICT"* ]]
       then
-        echo -e "WARNING : Merge Preview - Conflicts recorded.\nDo you want to continue merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
-        read fConf < /dev/tty
+        if [[ $flag_auto != "true" ]]
+          then
+            echo -e "WARNING : Merge Preview - Conflicts recorded while merging $fNew branch to $fBase branch..\nDo you want to continue merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+            read fConf < /dev/tty
+        else
+            fConf="2"
+        fi
         if [[ $fConf = "1" ]]
           then
             git merge $fNew &> /dev/null
@@ -203,7 +208,12 @@ merge()
           then
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
             git diff $fNew >> $cur_dir/${fBase}_diff_${fNew}.txt
-            echo -e "EXIT !\nREASON : Merge stopped as requested!\nRECOMMENDED : Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
+            if [[ $flag_auto != "true" ]]
+              then
+                echo -e "EXIT !\nREASON : Merge stopped as requested!\nRECOMMENDED : Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
+            else
+                echo -e "EXIT !\nREASON : Automerge aborted as conflicts recorded while merging $fNew branch to $fBase branch..\nRECOMMENDED : Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
+            fi
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
@@ -264,7 +274,7 @@ merge()
             code_push
         elif [[ $fRemove = "2" ]]
           then
-            echo "EXIT !\nREASON : Auto-merging stopped before committing as requested!"
+            echo -e "EXIT !\nREASON : Auto-merging stopped before committing as requested!"
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
@@ -412,9 +422,35 @@ git_push()
     fi
 }
 
+automerge ()
+{
+    branch_list=`awk  'BEGIN {FS = "|"}; {print}' < $cur_dir/automerge.conf | awk -v RS="|" '1'`
+    ar=($branch_list)
+    [[ $branch_list =~ (^|[[:space:]])"$fBase"($|[[:space:]]) ]] && automerge_branch="true" || automerge_branch="false"
+    if [[ $automerge_branch = "true" ]]
+      then
+        echo -e "INFO : Automerge initiated"
+        index=1; for i in "${ar[@]}"; do
+            [[ $i == "$fBase" ]] && break
+            ((++index))
+        done
+        export index
+        cd $cur_dir
+        ./git_automerge.sh
+    else
+        echo -e "INFO : Automerge not initiated for $fBase branch.\nRECOMMENDED : Mention the sequence of deployment for $fBase branch in automerge.conf to initiate automerge."
+    fi
+}
 
-echo -e "Do you want to merge $fNew branch into $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
-read fResp < /dev/tty
+
+if [[ $flag_auto != "true" ]]
+  then
+    echo -e "Do you want to merge $fNew branch into $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+    read fResp < /dev/tty
+else
+    fResp="1"
+fi
+
 if [[ $fResp = "1" ]]
   then
     #git config --global credential.helper 'cache --timeout=900'
@@ -428,7 +464,6 @@ if [[ $fResp = "1" ]]
     mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
     git add ${dir_repo}_tracker.csv &> /dev/null
     git commit -m "Merged branch $fNew into $fBase branch" &> /dev/null
-    #echo "Updated ${dir_repo}_tracker.csv"
     flag_tracker_push="true"
     git_push master
     cd ..
@@ -441,5 +476,9 @@ else
     echo -e "ERROR : Wrong input!\nPlease try again"
     ./git_merge.sh
 fi
+
+automerge
 done < temp_merge.conf
 rm $cur_dir/temp_merge.conf &> /dev/null
+#if [[ $flag_auto != "true" ]]
+#  then

@@ -448,20 +448,21 @@ automerge ()
 {
     branch_list=`awk  'BEGIN {FS = "|"}; {print}' < $cur_dir/automerge.conf | awk -v RS="|" '1'`
     ar=($branch_list)
-    [[ $branch_list =~ (^|[[:space:]])"$branch"($|[[:space:]]) ]] && automerge_branch="true" || automerge_branch="false"
+    [[ $branch_list =~ (^|[[:space:]])"$fBranch"($|[[:space:]]) ]] && automerge_branch="true" || automerge_branch="false"
     if [[ $automerge_branch = "true" ]]
       then
+        echo -e "INFO : Automerge initiated."
         index=1; for i in "${ar[@]}"; do
-            [[ $i == "$branch" ]] && break
+            [[ $i == "$fBranch" ]] && break
             ((++index))
         done
         export index
         cd $cur_dir
         ./git_automerge.sh
-        cd -
+    else
+        echo -e "INFO : Automerge not initiated for $fBranch branch.\nRECOMMENDED : Mention the sequence of deployment for $fBranch branch in automerge.conf to initiate automerge."
     fi
 }
-
 
 rebase_email ()
 {        
@@ -510,7 +511,7 @@ git_commit
 git_push_decide
 tracker_update
 rebase_email
-automerge
+#automerge
 
 cd $cur_dir/$dir_track_repo
 mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
@@ -528,3 +529,7 @@ rm -rf $cur_dir/$dir_track_repo &> /dev/null
 rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
 done < temp_push.conf
 rm $cur_dir/temp_push.conf &> /dev/null
+if [[ $FLAG_AUTOMERGE = "true" ]]
+  then
+    automerge
+fi
