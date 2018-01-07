@@ -13,6 +13,7 @@ validate()
 
 for (( j=$((index)); j<=$((branch_count-1)); j++ ))
 do
+    echo -e "INFO : Automerge initiated"
     branch=`awk -v var=$j -v var2=$((j+1)) 'BEGIN {FS = "|"}; {print $var"|"$var2}' $cur_dir/automerge.conf`
     
     for (( i=1; i<=2; ++i ));

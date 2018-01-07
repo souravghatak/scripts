@@ -451,7 +451,7 @@ automerge ()
     [[ $branch_list =~ (^|[[:space:]])"$fBranch"($|[[:space:]]) ]] && automerge_branch="true" || automerge_branch="false"
     if [[ $automerge_branch = "true" ]]
       then
-        echo -e "INFO : Automerge initiated."
+#        echo -e "INFO : Automerge initiated."
         index=1; for i in "${ar[@]}"; do
             [[ $i == "$fBranch" ]] && break
             ((++index))
@@ -511,7 +511,6 @@ git_commit
 git_push_decide
 tracker_update
 rebase_email
-#automerge
 
 cd $cur_dir/$dir_track_repo
 mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
@@ -531,5 +530,6 @@ done < temp_push.conf
 rm $cur_dir/temp_push.conf &> /dev/null
 if [[ $FLAG_AUTOMERGE = "true" ]]
   then
+    #echo -e "INFO : Automerge initiated"
     automerge
 fi
