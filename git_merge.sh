@@ -289,10 +289,6 @@ merge()
             if [[ $flag_auto = "true" ]]
               then
                 echo -e "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew"
-                rm $cur_dir/temp_merge.conf &> /dev/null
-                rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-                rm -rf $cur_dir/$dir_track_repo &> /dev/null
-                rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             else
                 echo -e "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew"
                 rm $cur_dir/temp_merge.conf &> /dev/null
@@ -306,10 +302,6 @@ merge()
               then
                 git reset HEAD --hard  &> /dev/null
                 echo -e "EXIT !\nREASON : $fBase branch is ahead of $fNew branch!\nRECOMMENDED : $fBase branch is up-to-date with the changes of $fNew branch and NO merging required."
-                rm $cur_dir/temp_merge.conf &> /dev/null
-                rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-                rm -rf $cur_dir/$dir_track_repo &> /dev/null
-                rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             else
                 rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
                 echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
@@ -516,7 +508,10 @@ git_push()
       then
         if [[ $flag_tracker_push = "true" ]]
           then
-            echo -e "INFO : Updated ${dir_repo}_tracker.csv"
+            if [[ $merge_var != *"Already up-to-date"* ]]
+              then
+                echo -e "INFO : Updated ${dir_repo}_tracker.csv"
+            fi
         else
             echo -e "SUCCESS!\nINFO : Changes pushed to remote $branch branch!"
         fi
@@ -528,7 +523,8 @@ git_push()
 
 automerge ()
 {
-    branch_list=`awk  'BEGIN {FS = "|"}; {print}' < $cur_dir/automerge.conf | awk -v RS="|" '1'`
+    awk '{if(NR>1)print}' automerge.conf > temp_automerge.conf
+    branch_list=`awk  'BEGIN {FS = "|"}; {print}' < $cur_dir/temp_automerge.conf | awk -v RS="|" '1'`
     ar=($branch_list)
     [[ $branch_list =~ (^|[[:space:]])"$fBase"($|[[:space:]]) ]] && automerge_branch="true" || automerge_branch="false"
     if [[ $automerge_branch = "true" ]]
@@ -543,6 +539,7 @@ automerge ()
     else
         echo -e "INFO : Automerge not initiated for $fBase branch.\nRECOMMENDED : Mention the sequence of deployment for $fBase branch in automerge.conf to initiate automerge."
     fi
+    rm $cur_dir/temp_automerge.conf &> /dev/null
 }
 
 

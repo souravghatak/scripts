@@ -86,6 +86,8 @@ list_of_files()
 {
     status=$(git status)
     fBranch=`git rev-parse --abbrev-ref HEAD`
+    echo -e "Branch name : $fBranch \nINFO : Initiating code commit & push"
+
     if [[ $status == *"You have unmerged paths."* ]]
       then
         merge_branch
@@ -161,25 +163,26 @@ list_of_files()
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
     else 
-        echo "Please find the list of changed files (Deleted/Modified/Added)"
+        echo -e "*********************************************************\nList of changed files (Deleted/Modified/Added)\n*********************************************************"
         if [[ $deleted_files != "" ]]
           then
-            printf "\nDeleted:\n$deleted_files\n"
+            echo -e "\nDeleted : $deleted_files"
         else
-            printf "\nDeleted: -\n"
+            echo -e "\nDeleted: -"
         fi
         if [[ $modified_files != "" ]]
           then
-            printf "\nModified:\n$modified_files\n"
+            echo -e "Modified : $modified_files" 
         else
-            printf "\nModified: -\n"
+            echo -e "Modified: -"
         fi
         if [[ $added_files != "" ]]
           then
-            printf "\nAdded:\n$added_files\n"
+            echo -e "Added: $added_files"
         else
-            printf "\nAdded: -\n"
+            echo -e "Added: -"
         fi
+        echo -e "\n*********************************************************"
     fi
     if [[ $flag_merge = "true" ]]
       then
@@ -446,12 +449,12 @@ tracker_update ()
 
 automerge ()
 {
-    branch_list=`awk  'BEGIN {FS = "|"}; {print}' < $cur_dir/automerge.conf | awk -v RS="|" '1'`
+    awk '{if(NR>1)print}' automerge.conf > temp_automerge.conf
+    branch_list=`awk  'BEGIN {FS = "|"}; {print}' < $cur_dir/temp_automerge.conf | awk -v RS="|" '1'`
     ar=($branch_list)
     [[ $branch_list =~ (^|[[:space:]])"$fBranch"($|[[:space:]]) ]] && automerge_branch="true" || automerge_branch="false"
     if [[ $automerge_branch = "true" ]]
       then
-#        echo -e "INFO : Automerge initiated."
         index=1; for i in "${ar[@]}"; do
             [[ $i == "$fBranch" ]] && break
             ((++index))
@@ -462,6 +465,7 @@ automerge ()
     else
         echo -e "INFO : Automerge not initiated for $fBranch branch.\nRECOMMENDED : Mention the sequence of deployment for $fBranch branch in automerge.conf to initiate automerge."
     fi
+    rm $cur_dir/temp_automerge.conf &> /dev/null
 }
 
 rebase_email ()
@@ -530,6 +534,5 @@ done < temp_push.conf
 rm $cur_dir/temp_push.conf &> /dev/null
 if [[ $FLAG_AUTOMERGE = "true" ]]
   then
-    #echo -e "INFO : Automerge initiated"
     automerge
 fi

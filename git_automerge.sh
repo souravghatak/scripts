@@ -1,8 +1,12 @@
 #!/bin/bash
 
 cur_dir=`pwd`
-branch_count=`head -1 $cur_dir/automerge.conf | tr '|' '\n' | wc -l`
-Dir="/home/sghatak/research/test/Repo1"
+#awk '{if(NR>1)print}' automerge.conf > temp_automerge.conf
+branch_count=`head -1 $cur_dir/temp_automerge.conf | tr '|' '\n' | wc -l`
+awk '{if(NR>1)print}' push.conf > temp_push.conf
+
+while IFS="|"  read -r fDir ;
+do
 validate()
 {
     git branch -r > $cur_dir/branches.txt
@@ -11,15 +15,36 @@ validate()
     echo $all_branches | grep -F -q -w "$1";
 }
 
+repo_dir()
+{
+    if [[ $fDir = "" ]] || [[ $flag_dir == "invalid" ]]
+      then
+        echo "Codebase directory :"
+        read fDir < /dev/tty
+    fi
+    if [[ ${#fDir} -eq 0 ]]
+      then
+        flag_dir="invalid"
+        echo -e "ERROR : Invalid directory!\nPlease try again"
+        repo_dir
+    fi
+    cd $fDir 2> /dev/null && flag_dir="valid" || flag_dir="invalid"
+    if [ $flag_dir == "invalid" ]
+      then
+        echo -e "ERROR : Invalid directory!\nPlease try again"
+        repo_dir
+    fi
+}
+
 for (( j=$((index)); j<=$((branch_count-1)); j++ ))
 do
     echo -e "INFO : Automerge initiated"
-    branch=`awk -v var=$j -v var2=$((j+1)) 'BEGIN {FS = "|"}; {print $var"|"$var2}' $cur_dir/automerge.conf`
+    branch=`awk -v var=$j -v var2=$((j+1)) 'BEGIN {FS = "|"}; {print $var"|"$var2}' $cur_dir/temp_automerge.conf`
     
     for (( i=1; i<=2; ++i ));
     do
         branch_name=`echo $branch | awk -v I=$i 'BEGIN {FS = "|"}; {print $I}'`
-        cd $Dir
+        repo_dir
         validate "$branch_name" && flag="valid" || flag="invalid"
         
         if [[ $flag = "valid" ]]
@@ -37,6 +62,7 @@ do
             rm $cur_dir/merge1.conf &> /dev/null
             rm $cur_dir/branches.txt &> /dev/null
             rm $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/temp_push.conf &> /dev/null
             exit
         fi
     done
@@ -50,3 +76,6 @@ do
     ./git_merge.sh
     exit 1
 done
+done < temp_push.conf
+rm $cur_dir/temp_push.conf &> /dev/null
+echo -e "INFO : Automerge completed"
