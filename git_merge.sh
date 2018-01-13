@@ -1,5 +1,4 @@
 #!/bin/sh
-
 awk '{if(NR>1)print}' merge.conf > temp_merge.conf
 cur_dir=`pwd`
 while IFS="|"  read -r fDir fBase fNew fURL ;
@@ -523,13 +522,16 @@ git_push()
 
 automerge ()
 {
-    awk '{if(NR>1)print}' automerge.conf > temp_automerge.conf
+    if [[ $direct_automerge != "true" ]]
+      then
+        awk '{if(NR>1)print}' automerge.conf > temp_automerge.conf
+    fi
     branch_list=`awk  'BEGIN {FS = "|"}; {print}' < $cur_dir/temp_automerge.conf | awk -v RS="|" '1'`
     ar=($branch_list)
     [[ $branch_list =~ (^|[[:space:]])"$fBase"($|[[:space:]]) ]] && automerge_branch="true" || automerge_branch="false"
     if [[ $automerge_branch = "true" ]]
       then
-        index=1; for i in "${ar[@]}"; do
+        index=1;for i in "${ar[@]}"; do
             [[ $i == "$fBase" ]] && break
             ((++index))
         done
@@ -540,6 +542,8 @@ automerge ()
         echo -e "INFO : Automerge not initiated for $fBase branch.\nRECOMMENDED : Mention the sequence of deployment for $fBase branch in automerge.conf to initiate automerge."
     fi
     rm $cur_dir/temp_automerge.conf &> /dev/null
+    rm $cur_dir/temp_merge.conf &> /dev/null
+    exit
 }
 
 
@@ -576,12 +580,10 @@ else
     echo -e "ERROR : Wrong input!\nPlease try again"
     ./git_merge.sh
 fi
-if [[ $FLAG_AUTOMERGE = "true" ]]
+if [[ $FLAG_AUTOMERGE = "true" ]] || [[ $direct_automerge = "true" ]]
   then
     automerge
 fi
 
 done < temp_merge.conf
 rm $cur_dir/temp_merge.conf &> /dev/null
-#if [[ $flag_auto != "true" ]]
-#  then

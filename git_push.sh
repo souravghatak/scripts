@@ -532,6 +532,7 @@ rm -rf $cur_dir/$dir_track_repo &> /dev/null
 rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
 done < temp_push.conf
 rm $cur_dir/temp_push.conf &> /dev/null
+
 if [[ $FLAG_AUTOMERGE = "true" ]]
   then
     automerge

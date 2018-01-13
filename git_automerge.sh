@@ -1,8 +1,13 @@
 #!/bin/bash
-
 cur_dir=`pwd`
-#awk '{if(NR>1)print}' automerge.conf > temp_automerge.conf
-branch_count=`head -1 $cur_dir/temp_automerge.conf | tr '|' '\n' | wc -l`
+
+if [[ $direct_automerge = "true" ]]
+  then
+    awk '{if(NR>1)print}' automerge.conf > temp_automerge.conf
+    branch_count=`head -1 $cur_dir/temp_automerge.conf | tr '|' '\n' | wc -l`
+else
+    branch_count=`head -1 $cur_dir/temp_automerge.conf | tr '|' '\n' | wc -l`
+fi
 awk '{if(NR>1)print}' push.conf > temp_push.conf
 
 while IFS="|"  read -r fDir ;
@@ -40,7 +45,6 @@ for (( j=$((index)); j<=$((branch_count-1)); j++ ))
 do
     echo -e "INFO : Automerge initiated"
     branch=`awk -v var=$j -v var2=$((j+1)) 'BEGIN {FS = "|"}; {print $var"|"$var2}' $cur_dir/temp_automerge.conf`
-    
     for (( i=1; i<=2; ++i ));
     do
         branch_name=`echo $branch | awk -v I=$i 'BEGIN {FS = "|"}; {print $I}'`
