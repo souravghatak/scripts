@@ -8,9 +8,9 @@ if [[ $direct_automerge = "true" ]]
 else
     branch_count=`head -1 $cur_dir/temp_automerge.conf | tr '|' '\n' | wc -l`
 fi
-awk '{if(NR>1)print}' push.conf > temp_push.conf
 
-while IFS="|"  read -r fDir ;
+awk '{if(NR>1)print}' merge.conf > temp_merge.conf
+while IFS="|"  read -r fDir fBase fNew fURL ;
 do
 validate()
 {
@@ -41,6 +41,31 @@ repo_dir()
     fi
 }
 
+repo_clone()
+{
+    if [[ $fURL = "" ]] || [[ $flag_repo = "invalid" ]]
+      then
+        echo "Repo URL :"
+        read fURL < /dev/tty
+    fi
+    if [[ ${#fURL} -eq 0 ]]
+      then
+        flag_repo="invalid"
+        echo -e "ERROR : Invalid URL! \nPlease try again"
+        repo_clone
+    fi
+
+    git clone $fURL &> /dev/null
+    dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
+    cd $dir_repo &> /dev/null && flag_repo="valid" || flag_repo="invalid"
+    if [ $flag_repo == "invalid" ]
+      then
+        echo -e "ERROR : Invalid URL! \nPlease try again"
+        repo_clone
+    fi
+}
+
+
 for (( j=$((index)); j<=$((branch_count-1)); j++ ))
 do
     echo -e "INFO : Automerge initiated"
@@ -49,6 +74,7 @@ do
     do
         branch_name=`echo $branch | awk -v I=$i 'BEGIN {FS = "|"}; {print $I}'`
         repo_dir
+        repo_clone
         validate "$branch_name" && flag="valid" || flag="invalid"
         
         if [[ $flag = "valid" ]]
@@ -80,6 +106,6 @@ do
     ./git_merge.sh
     exit 1
 done
-done < temp_push.conf
-rm $cur_dir/temp_push.conf &> /dev/null
+done < temp_merge.conf
+rm $cur_dir/temp_merge.conf &> /dev/null
 echo -e "INFO : Automerge completed"
