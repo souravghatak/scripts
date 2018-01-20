@@ -34,10 +34,10 @@ base_branch()
             git fetch &> /dev/null
             git checkout $fBase &> /dev/null
             git pull origin $fBase &> /dev/null
-            echo -e "INFO : Checked out branch : $fBase"
+            echo -e "SUCCESS!\nINFO : Checked out branch : $fBase \nCodebase directory : $fDir$dir_repo"
         else
             echo -e "ERROR : Invalid branch - $fBase .\nPlease try again!"
-            echo "Base branch :"
+            echo "Checkout branch :"
             read fBase < /dev/tty
             base_branch
         fi
@@ -50,7 +50,7 @@ base_branch()
             echo -e "INFO : No changes made as requested.\nCurrent branch : $cur_branch"
         elif [[ $fBranch == "2" ]]
           then
-            echo "Base branch :"
+            echo "Checkout branch :"
             read fBase < /dev/tty
             base_branch
         else
@@ -93,7 +93,7 @@ repo_clone()
             echo -e "EXIT!\nREASON : Unknown Error encountered - $clone_detail"
         fi
     else
-        echo -e "SUCCESS!\nINFO : Cloned $dir_repo repository successfully" 
+        echo -e "SUCCESS!\nINFO : Cloned $dir_repo repository successfully\nCodebase directory : $fDir$dir_repo" 
     fi 
 
     cd $dir_repo &> /dev/null && flag_repo="valid" || flag_repo="invalid"
@@ -106,7 +106,7 @@ repo_clone()
 
 dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
 
-echo -e "INFO : Review the details provided in clone_checkout.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nURL (Git repository URL) : $fURL \nBranch : $fBase\n***********************************************************************************************\n\nPress 1 for Git Clone : $dir_repo repository\nPress 2 for Git checkout : $fBase branch\nPress 3 for Both (Git clone and checkout) \nPress 4 for Exit"
+echo -e "INFO : Review the details provided in clone_checkout.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nURL (Git repository URL) : $fURL \nBranch : $fBase\n***********************************************************************************************\n\nPress 1 for Git Clone repository : $dir_repo \nPress 2 for Git Checkout branch: $fBase \nPress 3 for Both (Git clone and checkout) \nPress 4 for Exit"
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
   then
