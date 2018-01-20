@@ -236,7 +236,6 @@ list_of_files()
 
 merge()
 {
-#    merge_var=$(git merge $fNew --no-commit --no-ff; git merge --abort 2>&1 &> /dev/null) 
     echo -e "INFO : Merging $fNew branch to $fBase branch"
     merge_var=$(git merge $fNew --no-commit --no-ff 2>&1)
     list_of_files
