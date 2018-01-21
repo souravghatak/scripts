@@ -175,7 +175,7 @@ download_tracker()
     rm $cur_dir/temp_tracker.conf &> /dev/null
 }
 
-echo -e "Do you want to create a new branch $fNew - baselined to $fBase branch? \n\nFor Yes - Press 1\nFor No - Press 2"
+echo -e "INFO : Review the details provided in create.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nBase branch : $fBase \nNew Branch : $fNew \nURL (Git repository URL) : $fURL \nSystem Owner's Git Username : $fOwner \nSystem Owner's email : $fOwner_email \nProduction Branch : $live \n***********************************************************************************************\n\nDo you want to create a new branch $fNew - baselined to $fBase branch? \n\nFor Yes - Press 1\nFor No - Press 2"
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
   then

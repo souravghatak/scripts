@@ -10,6 +10,7 @@ else
 fi
 
 awk '{if(NR>1)print}' merge.conf > temp_merge.conf
+
 while IFS="|"  read -r fDir fBase fNew fURL ;
 do
 validate()
@@ -65,9 +66,9 @@ repo_clone()
     fi
 }
 
-
 for (( j=$((index)); j<=$((branch_count-1)); j++ ))
 do
+    echo -e "INFO : Review the details provided in automerge.conf\n\n***********************************************************************************************\nBranch names in order of deployment('|' separated) : `cat $cur_dir/temp_automerge.conf`\n***********************************************************************************************\n\nINFO : Review the details provided in merge.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nURL (Git repository URL) : $fURL \n***********************************************************************************************\n"
     echo -e "INFO : Automerge initiated"
     branch=`awk -v var=$j -v var2=$((j+1)) 'BEGIN {FS = "|"}; {print $var"|"$var2}' $cur_dir/temp_automerge.conf`
     for (( i=1; i<=2; ++i ));

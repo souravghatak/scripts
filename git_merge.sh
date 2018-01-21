@@ -548,7 +548,7 @@ automerge ()
 
 if [[ $flag_auto != "true" ]]
   then
-    echo -e "Do you want to merge $fNew branch into $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+    echo -e "INFO : Review the details provided in merge.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nBase branch : $fBase \nMerge Branch : $fNew \nURL (Git repository URL) : $fURL \n***********************************************************************************************\n\nDo you want to merge $fNew branch into $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
     read fResp < /dev/tty
 else
     fResp="1"
