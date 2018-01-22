@@ -68,8 +68,11 @@ repo_clone()
 
 for (( j=$((index)); j<=$((branch_count-1)); j++ ))
 do
-    echo -e "INFO : Review the details provided in automerge.conf\n\n***********************************************************************************************\nBranch names in order of deployment('|' separated) : `cat $cur_dir/temp_automerge.conf`\n***********************************************************************************************\n\nINFO : Review the details provided in merge.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nURL (Git repository URL) : $fURL \n***********************************************************************************************\n"
-    echo -e "INFO : Automerge initiated"
+    if [[ $j == "1" ]]
+      then
+        echo -e "INFO : Automerge initiated"
+        echo -e "INFO : Review the details provided in automerge.conf\n***********************************************************************************************\nBranch names in order of deployment('|' separated) : `cat $cur_dir/temp_automerge.conf`\n***********************************************************************************************\n"
+    fi
     branch=`awk -v var=$j -v var2=$((j+1)) 'BEGIN {FS = "|"}; {print $var"|"$var2}' $cur_dir/temp_automerge.conf`
     for (( i=1; i<=2; ++i ));
     do
@@ -98,10 +101,15 @@ do
         fi
     done
     mv $cur_dir/merge2.conf $cur_dir/merge.conf &> /dev/null
-    rm $cur_dir/merge1.conf
+    rm $cur_dir/merge1.conf &> /dev/null
     rm $cur_dir/branches.txt &> /dev/null
     rm $cur_dir/branches1.txt &> /dev/null
-    cd $cur_dir
+    cd $cur_dir &> /dev/null
+
+    fBase=`echo $branch | awk 'BEGIN {FS = "|"};{ print $2}'`
+    fNew=`echo $branch | awk 'BEGIN {FS = "|"};{ print $1}'` 
+
+    echo -e "INFO : Review the details provided in merge.conf\n***********************************************************************************************\nDirectory for local codebase : $fDir \nBase branch : $fBase \nMerge branch : $fNew \nURL (Git repository URL) : $fURL \n***********************************************************************************************\n"
     flag_auto="true"
     export flag_auto
     ./git_merge.sh
