@@ -200,51 +200,61 @@ list_of_files()
     modified_files1=`git status --porcelain | awk 'match($1, "UU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     added_files1=`git status --porcelain | awk 'match($1, "AA"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
 
-
-    echo -e "*********************************************************\nList of changed files (Deleted/Modified/Added)\n*********************************************************\n"
+    if [[ $healthcheck != "true" ]]
+      then
+        echo -e "*********************************************************\nList of changed files (Deleted/Modified/Added)\n*********************************************************\n"
     
-    if [[ $deleted_files != "" ]]
-      then
-        echo -e "\nDeleted : $deleted_files"
+        if [[ $deleted_files != "" ]]
+          then
+            echo -e "\nDeleted : $deleted_files"
+        fi
+        if [[ $modified_files != "" ]]
+          then
+            echo -e "Modified : $modified_files"
+        fi
+        if [[ $added_files != "" ]]
+          then
+            echo -e "Added : $added_files"
+        fi
+        if [[ $deleted_files1 != "" ]]
+          then
+            echo -e "CONFLICT : Deleted $deleted_files1 in $fNew branch and modified in $fBranch branch. Version - $fBranch of $deleted_files1 left in tree."
+        fi
+        if [[ $deleted_files2 != "" ]]
+          then
+            echo -e "CONFLICT : Deleted $deleted_files2 in $fBranch branch and modified in $fNew branch. Version - $fNew of $deleted_files2 left in tree."
+        fi
+        if [[ $modified_files1 != "" ]]
+          then
+            echo -e "CONFLICT : Merge conflict in $modified_files1 . Mofications are done as part of both $fNew branch and $fBranch branch."
+        fi
+        if [[ $deleted_files = "" ]] && [[ $modified_files = "" ]] && [[ $added_files = "" ]] && [[ $deleted_files1 = "" ]] && [[ $deleted_files2 = "" ]] && [[ $modified_files1 = "" ]]
+          then
+            echo -e "Already up to date - No files to merge"
+        fi
+        echo -e "\n*********************************************************"
     fi
-    if [[ $modified_files != "" ]]
-      then
-        echo -e "Modified : $modified_files"
-    fi
-    if [[ $added_files != "" ]]
-      then
-        echo -e "Added : $added_files"
-    fi
-    if [[ $deleted_files1 != "" ]]
-      then
-        echo -e "CONFLICT : Deleted $deleted_files1 in $fNew branch and modified in $fBranch branch. Version - $fBranch of $deleted_files1 left in tree."
-    fi
-    if [[ $deleted_files2 != "" ]]
-      then
-        echo -e "CONFLICT : Deleted $deleted_files2 in $fBranch branch and modified in $fNew branch. Version - $fNew of $deleted_files2 left in tree."
-    fi
-    if [[ $modified_files1 != "" ]]
-      then
-        echo -e "CONFLICT : Merge conflict in $modified_files1 . Mofications are done as part of both $fNew branch and $fBranch branch."
-    fi
-    if [[ $deleted_files = "" ]] && [[ $modified_files = "" ]] && [[ $added_files = "" ]] && [[ $deleted_files1 = "" ]] && [[ $deleted_files2 = "" ]] && [[ $modified_files1 = "" ]]
-      then
-        echo -e "Already up to date - No files to merge"
-    fi
-    echo -e "\n*********************************************************"
 }
 
 merge()
 {
-    echo -e "INFO : Merging $fNew branch to $fBase branch"
+    if [[ $healthcheck != "true" ]]
+      then
+        echo -e "INFO : Merging $fNew branch to $fBase branch"
+    fi
     merge_var=$(git merge $fNew --no-commit --no-ff 2>&1)
     list_of_files
     if [[ $merge_var == *"CONFLICT"* ]]
       then
-        if [[ $flag_auto != "true" ]]
+        if [[ $flag_auto != "true" ]] && [[ $healthcheck != "true" ]]
           then
             echo -e "WARNING : Merge Preview - Conflicts recorded while merging $fNew branch to $fBase branch.\nDo you want to continue merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
             read fConf < /dev/tty
+        elif [[ $healthcheck = "true" ]]
+          then
+            echo -e "****************************************************************************************************\nHEALTHCHECK STATUS : FAILED\nREASON : $fNew branch to $fBase branch merge is pending.\nMERGE PREVIEW : Conflicts recorded while merging $fNew branch to $fBase branch\n****************************************************************************************************"
+            git merge --abort &> /dev/null
+            fConf="3"
         else
             fConf="1"
         fi
@@ -267,7 +277,6 @@ merge()
           then
             git merge --abort &> /dev/null
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
-            git diff $fNew >> $cur_dir/${fBase}_diff_${fNew}.txt
             echo -e "EXIT !\nREASON : Merge stopped as requested!\nRECOMMENDED : Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
@@ -284,9 +293,12 @@ merge()
         git_diff=$(git diff $fNew)
         if [[ ${#git_diff} -eq 0 ]]
           then
-            if [[ $flag_auto = "true" ]]
+            if [[ $flag_auto = "true" ]] && [[ $healthcheck != "true" ]]
               then
                 echo -e "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew"
+            elif [[ $healthcheck = "true" ]]
+              then
+                echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : OK\nDETAILS : There is nothing to merge and no difference between branch $fBase and $fNew \n****************************************************************************************************"
             else
                 echo -e "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew"
                 rm $cur_dir/temp_merge.conf &> /dev/null
@@ -296,10 +308,14 @@ merge()
                 exit
             fi
         else
-            if [[ $flag_auto = "true" ]]
+            if [[ $flag_auto = "true" ]] && [[ $healthcheck != "true" ]]
               then
                 git reset HEAD --hard  &> /dev/null
                 echo -e "EXIT !\nREASON : $fBase branch is ahead of $fNew branch!\nRECOMMENDED : $fBase branch is up-to-date with the changes of $fNew branch and NO merging required."
+            elif [[ $healthcheck = "true" ]]
+              then
+                git reset HEAD --hard  &> /dev/null
+                echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : OK\nDETAILS : $fBase branch is ahead of $fNew branch! $fBase branch is up-to-date with the changes of $fNew branch and NO merging required.\n****************************************************************************************************"
             else
                 rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
                 echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
@@ -313,10 +329,15 @@ merge()
         fi   
     elif [[ $merge_var == *"Removing"* ]]
       then
-        if [[ $flag_auto != "true" ]]
+        if [[ $flag_auto != "true" ]] && [[ $healthcheck != "true" ]]
           then
-            echo -e "WARNING : Merge Preview - "$merge_var "\nDo you want to continue removing the files from $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+            echo -e "WARNING : Merge Preview - "$merge_var .Automerge would be successful"\nDo you want to continue removing the files from $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
             read fRemove < /dev/tty
+        elif [[ $healthcheck = "true" ]]
+          then
+            echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : FAILURE\nREASON : $fNew branch to $fBase branch merge is pending\nMERGE PREVIEW : $merge_var .Automerge would be successful\n****************************************************************************************************"
+            fRemove="3"
+            git merge --abort &> /dev/null
         else
             fRemove="1"
             echo -e "INFO : Removing $deleted_files .\nAutomerging $fNew branch to $fBase branch "
@@ -335,6 +356,9 @@ merge()
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
             rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
+        elif [[ $fRemove = "3" ]]
+          then
+            echo
         else
             git merge --abort &> /dev/null
             echo -e "ERROR : Wrong input!\nPlease try again"
@@ -342,10 +366,15 @@ merge()
         fi
     elif [[ $merge_var == *"Automatic merge went well"* ]] 
       then
-        if [[ $flag_auto != "true" ]]
+        if [[ $flag_auto != "true" ]] && [[ $healthcheck != "true" ]]
           then
             echo -e "WARNING : Merge Preview - Automerge would be successful.\nDo you want to continue automerging $fNew branch to $fBase branch and code push to remote repository? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
             read fMerge < /dev/tty
+        elif [[ $healthcheck = "true" ]]
+          then
+            echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : FAILED\nREASON : $fNew branch to $fBase branch merge is pending\nMERGE PREVIEW : Automerge would be successful\n****************************************************************************************************"
+            git merge --abort &> /dev/null
+            fMerge="3"
         else
             fMerge="1"
             echo -e "INFO : Automerging $fNew branch to $fBase branch"
@@ -364,6 +393,9 @@ merge()
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
             rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
+        elif [[ $fMerge = "3" ]]
+          then
+            echo
         else
             git merge --abort &> /dev/null
             echo -e "ERROR : Wrong input!\nPlease try again"
@@ -371,7 +403,15 @@ merge()
         fi
     elif [[ $merge_var == *"'merge' is not possible because you have unmerged files"* ]]
       then
-        echo -e "ERROR : Merge is not possible because you have unmerged files in $fBase branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
+        if [[ $healthcheck = true ]]
+          then
+            echo -e "ERROR : Healthcheck is not possible because you have unmerged files in $fBase branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
+        elif [[ $flag_auto = "true" ]] && [[ $healthcheck != true ]]
+          then
+            echo -e "ERROR : Automerge is not possible because you have unmerged files in $fBase branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
+        else
+            echo -e "ERROR : Merge is not possible because you have unmerged files in $fBase branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
+        fi
         rm $cur_dir/temp_merge.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
@@ -379,7 +419,7 @@ merge()
         exit
     else
         git merge --abort &> /dev/null
-        echo -e "EXIT !\nREASON :  Merge failure. Unknown Error.\nRECOMMENDED : Please investigate with the below stacktrace and re-try.\n\n********ERROR********\n\n$merge_var"
+        echo -e "EXIT !\nREASON : Unknown Error.\nRECOMMENDED : Please investigate with the below stacktrace and re-try.\n\n********ERROR********\n\n$merge_var"
         rm $cur_dir/temp_merge.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
@@ -518,10 +558,9 @@ git_push()
         git_push $branch
     fi
 }
-
 automerge ()
 {
-    if [[ $direct_automerge != "true" ]]
+    if [[ $direct_automerge != "true" ]] || [[ $healthcheck != "true" ]]
       then
         awk '{if(NR>1)print}' automerge.conf > temp_automerge.conf
     fi
@@ -536,7 +575,13 @@ automerge ()
         done
         export index
         cd $cur_dir
-        ./git_automerge.sh
+        if [[ $direct_automerge = "true" ]]
+          then
+            ./git_automerge.sh
+        elif [[ $healthcheck = "true" ]]
+          then
+            ./git_healthcheck.sh
+        fi
     else
         echo -e "INFO : Automerge not initiated for $fBase branch.\nRECOMMENDED : Mention the sequence of deployment for $fBase branch in automerge.conf to initiate automerge."
     fi
@@ -565,10 +610,13 @@ if [[ $fResp = "1" ]]
     merge
     cd $cur_dir/$dir_track_repo
     mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
-    git add ${dir_repo}_tracker.csv &> /dev/null
-    git commit -m "Merged branch $fNew into $fBase branch" &> /dev/null
-    flag_tracker_push="true"
-    git_push master
+    if [[ $healthcheck != "true" ]]
+      then
+        git add ${dir_repo}_tracker.csv &> /dev/null
+        git commit -m "Merged branch $fNew into $fBase branch" &> /dev/null
+        flag_tracker_push="true"
+        git_push master
+    fi
     cd ..
     rm -rf $cur_dir/$dir_track_repo &> /dev/null
     rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
@@ -579,7 +627,7 @@ else
     echo -e "ERROR : Wrong input!\nPlease try again"
     ./git_merge.sh
 fi
-if [[ $FLAG_AUTOMERGE = "true" ]] || [[ $direct_automerge = "true" ]]
+if [[ $FLAG_AUTOMERGE = "true" ]] || [[ $direct_automerge = "true" ]] || [[ $healthcheck = "true" ]]
   then
     automerge
 fi

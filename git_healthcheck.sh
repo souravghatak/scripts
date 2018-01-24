@@ -1,7 +1,8 @@
 #!/bin/bash
+
 cur_dir=`pwd`
 
-if [[ $direct_automerge = "true" ]]
+if [[ $healthcheck = "true" ]]
   then
     awk '{if(NR>1)print}' automerge.conf > temp_automerge.conf
     branch_count=`head -1 $cur_dir/temp_automerge.conf | tr '|' '\n' | wc -l`
@@ -10,7 +11,6 @@ else
 fi
 
 awk '{if(NR>1)print}' merge.conf > temp_merge.conf
-
 while IFS="|"  read -r fDir fBase fNew fURL ;
 do
 validate()
@@ -70,8 +70,8 @@ for (( j=$((index)); j<=$((branch_count-1)); j++ ))
 do
     if [[ $j == "1" ]]
       then
-        echo -e "INFO : Automerge initiated\n"
-        echo -e "INFO : Review the details provided in automerge.conf\n***********************************************************************************************\nBranch names in order of deployment('|' separated) : `cat $cur_dir/temp_automerge.conf`\n***********************************************************************************************\n"
+        echo -e "INFO : Healthcheck initiated\n"
+        echo -e "INFO : Review the details provided in automerge.conf\n****************************************************************************************************\nBranch names in order of deployment('|' separated) : `cat $cur_dir/temp_automerge.conf`\n****************************************************************************************************\n"
     fi
     branch=`awk -v var=$j -v var2=$((j+1)) 'BEGIN {FS = "|"}; {print $var"|"$var2}' $cur_dir/temp_automerge.conf`
     for (( i=1; i<=2; ++i ));
@@ -80,7 +80,7 @@ do
         repo_dir
         repo_clone
         validate "$branch_name" && flag="valid" || flag="invalid"
-        
+
         if [[ $flag = "valid" ]]
           then
             if [[ $i == 1 ]]
@@ -91,7 +91,7 @@ do
                 awk -v var1=$branch_name 'BEGIN {FS = "|"}; {OFS = "|"}; {if (FNR == 2) {$2 = var1}; { print }}' $cur_dir/merge1.conf > $cur_dir/merge2.conf
             fi
         else
-            echo -e "ERROR : Automerge aborted!\nREASON : Invalid branch - $branch_name in automerge.conf"
+            echo -e "ERROR : Healthcheck aborted!\nREASON : Invalid branch - $branch_name in automerge.conf"
             mv $cur_dir/merge2.conf $cur_dir/merge.conf &> /dev/null
             rm $cur_dir/merge1.conf &> /dev/null
             rm $cur_dir/branches.txt &> /dev/null
@@ -107,9 +107,9 @@ do
     cd $cur_dir &> /dev/null
 
     fBase=`echo $branch | awk 'BEGIN {FS = "|"};{ print $2}'`
-    fNew=`echo $branch | awk 'BEGIN {FS = "|"};{ print $1}'` 
+    fNew=`echo $branch | awk 'BEGIN {FS = "|"};{ print $1}'`
 
-    echo -e "INFO : Review the details provided in merge.conf\n***********************************************************************************************\nDirectory for local codebase : $fDir \nBase branch : $fBase \nMerge branch : $fNew \nURL (Git repository URL) : $fURL \n***********************************************************************************************\n"
+    #echo -e "INFO : Review the details provided in merge.conf\n***********************************************************************************************\nDirectory for local codebase : $fDir \nBase branch : $fBase \nMerge branch : $fNew \nURL (Git repository URL) : $fURL \n***********************************************************************************************\n"
     flag_auto="true"
     export flag_auto
     ./git_merge.sh
@@ -117,4 +117,4 @@ do
 done
 done < temp_merge.conf
 rm $cur_dir/temp_merge.conf &> /dev/null
-echo -e "INFO : Automerge completed"
+echo -e "INFO : Healthcheck completed"
