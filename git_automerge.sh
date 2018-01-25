@@ -66,6 +66,27 @@ repo_clone()
     fi
 }
 
+repo_dir
+repo_clone
+fBranch=`git rev-parse --abbrev-ref HEAD`
+merge_var=$(git status)
+if [[ $merge_var == *"You have unmerged paths."* ]]
+      then
+        echo -e "ERROR : Automerge is not possible because you have unmerged files in $fBranch branch. Exiting because of an unresolved conflict.\nCodebase directory : $fDir$dir_repo \nRECOMMENDED : Resolve the conflicts manually, do git commit & push & try automerge"
+        rm $cur_dir/temp_merge.conf &> /dev/null
+        rm $cur_dir/temp_push.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/temp_automerge.conf &> /dev/null
+        exit
+elif [[ $merge_var == *"Untracked files"* ]] || [[ $merge_var == *"Changes not staged for commit"* ]]
+  then
+    echo -e "ERROR : Automerge is not possible because you have unstaged or untracked files in $fBranch branch.\nCodebase directory : $fDir$dir_repo \nRECOMMENDED : Do git commit & push & try automerge"
+        rm $cur_dir/temp_merge.conf &> /dev/null
+        rm $cur_dir/temp_push.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/temp_automerge.conf &> /dev/null
+        exit
+else
 for (( j=$((index)); j<=$((branch_count-1)); j++ ))
 do
     if [[ $j == "1" ]]
@@ -97,6 +118,7 @@ do
             rm $cur_dir/branches.txt &> /dev/null
             rm $cur_dir/branches1.txt &> /dev/null
             rm $cur_dir/temp_push.conf &> /dev/null
+            rm $cur_dir/temp_merge.conf &> /dev/null
             exit
         fi
     done
@@ -115,6 +137,7 @@ do
     ./git_merge.sh
     exit 1
 done
+fi
 done < temp_merge.conf
 rm $cur_dir/temp_merge.conf &> /dev/null
 echo -e "INFO : Automerge completed"

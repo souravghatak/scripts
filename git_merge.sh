@@ -266,7 +266,7 @@ merge()
               then
                 echo -e "EXIT !\nREASON : Conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
             else
-                echo -e "EXIT !\nREASON : Automerge aborted as conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
+                echo -e "EXIT !\nREASON : Automerge aborted as conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push.\n"
             fi
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
@@ -295,10 +295,10 @@ merge()
           then
             if [[ $flag_auto = "true" ]] && [[ $healthcheck != "true" ]]
               then
-                echo -e "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew"
+                echo -e "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew \n"
             elif [[ $healthcheck = "true" ]]
               then
-                echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : OK\nDETAILS : There is nothing to merge and no difference between branch $fBase and $fNew \n****************************************************************************************************"
+                echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : OK\nDETAILS : There is nothing to merge and no difference between branch $fBase and $fNew \n****************************************************************************************************\n"
             else
                 echo -e "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew"
                 rm $cur_dir/temp_merge.conf &> /dev/null
@@ -311,11 +311,11 @@ merge()
             if [[ $flag_auto = "true" ]] && [[ $healthcheck != "true" ]]
               then
                 git reset HEAD --hard  &> /dev/null
-                echo -e "EXIT !\nREASON : $fBase branch is ahead of $fNew branch!\nRECOMMENDED : $fBase branch is up-to-date with the changes of $fNew branch and NO merging required."
+                echo -e "EXIT !\nREASON : $fBase branch is ahead of $fNew branch!\nRECOMMENDED : $fBase branch is up-to-date with the changes of $fNew branch and NO merging required.\n"
             elif [[ $healthcheck = "true" ]]
               then
                 git reset HEAD --hard  &> /dev/null
-                echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : OK\nDETAILS : $fBase branch is ahead of $fNew branch! $fBase branch is up-to-date with the changes of $fNew branch and NO merging required.\n****************************************************************************************************"
+                echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : OK\nDETAILS : $fBase branch is ahead of $fNew branch! $fBase branch is up-to-date with the changes of $fNew branch and NO merging required.\n****************************************************************************************************\n"
             else
                 rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
                 echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
@@ -335,12 +335,12 @@ merge()
             read fRemove < /dev/tty
         elif [[ $healthcheck = "true" ]]
           then
-            echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : FAILURE\nREASON : $fNew branch to $fBase branch merge is pending\nMERGE PREVIEW : $merge_var .Automerge would be successful\n****************************************************************************************************"
+            echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : FAILURE\nREASON : $fNew branch to $fBase branch merge is pending\nMERGE PREVIEW : $merge_var .Automerge would be successful\n****************************************************************************************************\n"
             fRemove="3"
             git merge --abort &> /dev/null
         else
             fRemove="1"
-            echo -e "INFO : Removing $deleted_files .\nAutomerging $fNew branch to $fBase branch "
+            echo -e "INFO : Removing $deleted_files .\nAutomerging $fNew branch to $fBase branch \n"
         fi
         if [[ $fRemove = "1" ]]
           then
@@ -372,12 +372,12 @@ merge()
             read fMerge < /dev/tty
         elif [[ $healthcheck = "true" ]]
           then
-            echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : FAILED\nREASON : $fNew branch to $fBase branch merge is pending\nMERGE PREVIEW : Automerge would be successful\n****************************************************************************************************"
+            echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : FAILED\nREASON : $fNew branch to $fBase branch merge is pending\nMERGE PREVIEW : Automerge would be successful\n****************************************************************************************************\n"
             git merge --abort &> /dev/null
             fMerge="3"
         else
             fMerge="1"
-            echo -e "INFO : Automerging $fNew branch to $fBase branch"
+            echo -e "INFO : Automerging $fNew branch to $fBase branch \n"
         fi
         if [[ $fMerge = "1" ]]
           then
@@ -403,14 +403,15 @@ merge()
         fi
     elif [[ $merge_var == *"'merge' is not possible because you have unmerged files"* ]]
       then
+        fBranch=`git rev-parse --abbrev-ref HEAD`
         if [[ $healthcheck = true ]]
           then
-            echo -e "ERROR : Healthcheck is not possible because you have unmerged files in $fBase branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
+            echo -e "ERROR : Healthcheck is not possible because you have unmerged files in $fBranch branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
         elif [[ $flag_auto = "true" ]] && [[ $healthcheck != true ]]
           then
-            echo -e "ERROR : Automerge is not possible because you have unmerged files in $fBase branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
+            echo -e "ERROR : Automerge is not possible because you have unmerged files in $fBranch branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
         else
-            echo -e "ERROR : Merge is not possible because you have unmerged files in $fBase branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
+            echo -e "ERROR : Merge is not possible because you have unmerged files in $fBranch branch. Exiting because of an unresolved conflict.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
         fi
         rm $cur_dir/temp_merge.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
@@ -419,7 +420,7 @@ merge()
         exit
     else
         git merge --abort &> /dev/null
-        echo -e "EXIT !\nREASON : Unknown Error.\nRECOMMENDED : Please investigate with the below stacktrace and re-try.\n\n********ERROR********\n\n$merge_var"
+        echo -e "EXIT !\nREASON : Unknown Error.\nRECOMMENDED : Please investigate with the below stacktrace and re-try.\n\n********ERROR********\n\n$merge_var \n"
         rm $cur_dir/temp_merge.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
