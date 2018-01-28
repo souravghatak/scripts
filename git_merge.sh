@@ -93,10 +93,8 @@ base_branch()
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
         exit
     fi
-    if [[ $flag_live = "false" ]]
+    if [[ $flag_live = "true" ]]
       then
-        flag="valid"
-    else
         echo -e "WARNING : $fBase is the live branch and you are about to merge $fNew branch to $fBase branch.\nPlease confirm the changes made as part of $fNew branch is in production. \n\nFor Yes, Press 1\nFor No, Press 2"
         read fMaster < /dev/tty
         if [[ $fMaster = "1" ]]
@@ -110,7 +108,7 @@ base_branch()
             base_branch
         fi
     fi        
-    if [ $flag = "valid" ]
+    if [[ $flag = "valid" ]]
       then
         git fetch &> /dev/null
         git checkout $fBase &> /dev/null
@@ -331,7 +329,7 @@ merge()
       then
         if [[ $flag_auto != "true" ]] && [[ $healthcheck != "true" ]]
           then
-            echo -e "WARNING : Merge Preview - "$merge_var .Automerge would be successful"\nDo you want to continue removing the files from $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
+            echo -e "WARNING : Merge Preview - "$merge_var "\nDo you want to continue automerge & removing the files from $fBase branch? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
             read fRemove < /dev/tty
         elif [[ $healthcheck = "true" ]]
           then
