@@ -85,7 +85,7 @@ base_branch()
     [[ $live =~ (^|[[:space:]])"$fBase"($|[[:space:]]) ]] && flag_live="true" || flag_live="false"
     [[ $fProd_branch =~ (^|[[:space:]])"$fBase"($|[[:space:]]) ]] && flag_prod="true" || flag_prod="false"
 
-    if [[ $flag_prod = "true" ]]
+    if [[ $flag_prod = "true" ]] && [[ $healthcheck != "true" ]]
       then
         echo -e "EXIT !\nREASON : This branch ($fBase branch) is already in production and no more changes to this branch will be acknowledged."
         rm $cur_dir/temp_merge.conf &> /dev/null
@@ -93,7 +93,7 @@ base_branch()
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
         exit
     fi
-    if [[ $flag_live = "true" ]]
+    if [[ $flag_live = "true" ]] && [[ $healthcheck != "true" ]] 
       then
         echo -e "WARNING : $fBase is the live branch and you are about to merge $fNew branch to $fBase branch.\nPlease confirm the changes made as part of $fNew branch is in production. \n\nFor Yes, Press 1\nFor No, Press 2"
         read fMaster < /dev/tty
@@ -265,6 +265,7 @@ merge()
                 echo -e "EXIT !\nREASON : Conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
             else
                 echo -e "EXIT !\nREASON : Automerge aborted as conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push.\n"
+                rm $cur_dir/temp_automerge.conf &> /dev/null
             fi
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
@@ -281,6 +282,9 @@ merge()
             rm -rf $cur_dir/$dir_track_repo &> /dev/null
             rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
             exit
+        elif [[ $fConf = "3" ]]
+          then
+            echo
         else
             git merge --abort &> /dev/null
             echo -e "ERROR : Wrong input!\nPlease try again"
@@ -294,6 +298,7 @@ merge()
             if [[ $flag_auto = "true" ]] && [[ $healthcheck != "true" ]]
               then
                 echo -e "EXIT !\nREASON : There is nothing to merge and no difference between branch $fBase and $fNew \n"
+                rm $cur_dir/temp_automerge.conf &> /dev/null
             elif [[ $healthcheck = "true" ]]
               then
                 echo -e "****************************************************************************************************\nCHECKING : $fNew -> $fBase \nHEALTHCHECK STATUS : OK\nDETAILS : There is nothing to merge and no difference between branch $fBase and $fNew \n****************************************************************************************************\n"
@@ -310,6 +315,7 @@ merge()
               then
                 git reset HEAD --hard  &> /dev/null
                 echo -e "EXIT !\nREASON : $fBase branch is ahead of $fNew branch!\nRECOMMENDED : $fBase branch is up-to-date with the changes of $fNew branch and NO merging required.\n"
+                rm $cur_dir/temp_automerge.conf &> /dev/null
             elif [[ $healthcheck = "true" ]]
               then
                 git reset HEAD --hard  &> /dev/null

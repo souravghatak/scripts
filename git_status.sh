@@ -2,6 +2,7 @@
 
 awk '{if(NR>1)print}' clone_checkout.conf > temp_clone.conf
 
+cur_dir=`pwd`
 while IFS="|"  read -r fDir fURL fBase;
 do
 
@@ -57,68 +58,67 @@ list_of_files()
 
     if [[ $status == *"You have unmerged paths."* ]]
       then
-        #merge_branch
-        echo -e ""
+        deleted_files1=`git status --porcelain | awk 'match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        deleted_files2=`git status --porcelain | awk 'match($1, "DU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        modified_files1=`git status --porcelain | awk 'match($1, "UU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        added_files1=`git status --porcelain | awk 'match($1, "AA"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        
+        if [[ $deleted_files1 != "" ]]
+          then
+            echo -e "WARNING : Deleted $deleted_files1 from $fNew branch"
+        fi
+
+        if [[ $deleted_files2 != "" ]]
+          then
+            echo -e "WARNING : Removed $deleted_files2 from branch $fBranch . Adding  $deleted_files2 while merging $fNew branch"
+        fi
+    fi
+    
+    staged_files=`git diff --name-status --staged`
+    if [[ $staged_files != "" ]]
+      then
+        echo -e "*********************************************************\nList of staged files (Deleted/Modified/Added)\n*********************************************************"
+        staged_added_files=`git diff --name-status --staged | awk 'match($1,"A") {print "Added : " $2}'`
+        staged_modified_files=`git diff --name-status --staged | awk 'match($1,"M") {print "Modified : " $2}'`
+        staged_deleted_files=`git diff --name-status --staged | awk 'match($1,"D") {print "Deleted : " $2}'`
+
+        echo -e $staged_added_files"\n"$staged_modified_files"\n"$staged_deleted_files
+        echo -e "*********************************************************"
     fi
 
-    deleted_files=`git status --porcelain | awk '{if ($1 == "D") {print $2}}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    modified_files=`git status --porcelain | awk 'match($1, "M") || match($1, "UU") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    added_files=`git status --porcelain | awk 'match($1, "?") || match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-
-    deleted_files1=`git status --porcelain | awk 'match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    deleted_files2=`git status --porcelain | awk 'match($1, "DU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    modified_files1=`git status --porcelain | awk 'match($1, "UU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    added_files1=`git status --porcelain | awk 'match($1, "AA"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-
-    if [[ $deleted_files1 != "" ]]
+    unstaged_files=`git diff --name-only`
+    if [[ $unstaged_files != "" ]]
       then
-        echo -e "WARNING : Deleted $deleted_files1 from $fNew branch"
+        echo -e "*********************************************************\nList of unstaged files (Deleted/Modified/Added)\n*********************************************************"
+        unstaged_added_files=`git diff --name-status | awk 'match($1,"A") {print "Added : " $2}'`
+        unstaged_modified_files=`git diff --name-status | awk 'match($1,"M") {print "Modified : " $2}'`
+        unstaged_deleted_files=`git diff --name-status | awk 'match($1,"D") {print "Deleted : " $2}'`
+
+        echo -e $unstaged_added_files"\n"$unstaged_modified_files"\n"$unstaged_deleted_files
+        echo -e "*********************************************************"
     fi
 
-    if [[ $deleted_files2 != "" ]]
+    untracked_files=`git ls-files --others --exclude-standard`
+    if [[ $untracked_files != "" ]]
       then
-        echo -e "WARNING : Removed $deleted_files2 from branch $fBranch . Adding  $deleted_files2 while merging $fNew branch"
+        echo -e "*********************************************************\nList of untracked files (Deleted/Modified/Added)\n*********************************************************"
+        untracked_added_files=`git ls-files --others --exclude-standard -t | awk 'match($1,"?") {print "Added : " $2}'`
+        
+        echo -e $untracked_added_files 
+        echo -e "*********************************************************"
     fi
-
-    if [[ $deleted_files = "" ]] && [[ $modified_files = "" ]] && [[ $added_files = "" ]]
+    if [[ $staged_files = "" ]] && [[ $unstaged_files = "" ]] && [[ $untracked_files = "" ]]
       then
-        echo -e "EXIT !\nREASON : No files changed to commit. Thank you"
-        rm $cur_dir/temp_push.conf &> /dev/null
+        echo -e "INFO : No files changed to commit. Thank you"
+        rm $cur_dir/temp_clone.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
-        rm -rf $cur_dir/$dir_track_repo &> /dev/null
         exit
-    else
-        echo -e "*********************************************************\nList of changed files (Deleted/Modified/Added)\n*********************************************************"
-        if [[ $deleted_files != "" ]]
-          then
-            echo -e "\nDeleted : $deleted_files"
-        else
-            echo -e "\nDeleted: -"
-        fi
-        if [[ $modified_files != "" ]]
-          then
-            echo -e "Modified : $modified_files"
-        else
-            echo -e "Modified: -"
-        fi
-        if [[ $added_files != "" ]]
-          then
-            echo -e "Added: $added_files"
-        else
-            echo -e "Added: -"
-        fi
-        echo -e "\n*********************************************************"
-    fi
-    if [[ $flag_merge = "true" ]]
-      then
-        module_list="$deleted_files1"$'\n'"$deleted_files2"$'\n'"${modified_files1}"$'\n'"${added_files1}"
-    else
-        module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
     fi
 }
+
 
 repo_dir
 repo_clone
 list_of_files
 done < temp_clone.conf
+rm $cur_dir/temp_clone.conf &> /dev/null
