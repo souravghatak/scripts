@@ -89,6 +89,8 @@ base_branch()
       then
         echo -e "EXIT !\nREASON : This branch ($fBase branch) is already in production and no more changes to this branch will be acknowledged."
         rm $cur_dir/temp_merge.conf &> /dev/null
+        rm $cur_dir/temp_automerge.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null 
         rm -rf $cur_dir/$dir_track_repo &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
         exit
@@ -639,3 +641,5 @@ fi
 
 done < temp_merge.conf
 rm $cur_dir/temp_merge.conf &> /dev/null
+rm $cur_dir/temp_automerge.conf &> /dev/null
+rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
