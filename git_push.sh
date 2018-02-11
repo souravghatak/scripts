@@ -1,18 +1,14 @@
 #!/bin/sh
 
-awk '{if(NR>1)print}' push.conf > temp_push.conf
-awk '{if(NR>1)print}' merge.conf > temp_merge.conf
+awk '{if(NR>1)print}' common.conf > temp_push.conf
 cur_dir=`pwd`
 module_list=""
 branch=""
 flag_merge="false"
-fNew=`cut -d'|' -f3 < temp_merge.conf`
-rm $cur_dir/temp_merge.conf &> /dev/null
 
-
-while IFS="|"  read -r fDir ;
+while IFS="|"  read -r fDir fURL fBase;
 do
-dir_repo=`echo $fDir | awk -F '[/]' '{print $(NF)}'`
+dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
 
 repo_dir()
 {
@@ -35,8 +31,33 @@ repo_dir()
     fi
 }
 
+repo_clone()
+{
+    if [[ $fURL = "" ]] || [[ $flag_repo = "invalid" ]]
+      then
+        echo "Repo URL :"
+        read fURL < /dev/tty
+    fi
+    if [[ ${#fURL} -eq 0 ]]
+      then
+        flag_repo="invalid"
+        echo -e "ERROR : Invalid URL!\nPlease try again"
+        repo_clone
+    fi
+    git clone $fURL &> /dev/null
+    dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
+    cd $dir_repo &> /dev/null && flag_repo="valid" || flag_repo="invalid"
+    if [ $flag_repo == "invalid" ]
+      then
+        echo -e "ERROR : Invalid URL!\nPlease try again"
+        repo_clone
+    fi
+}
+
+
 merge_branch()
 {
+    fNew=`git rev-parse --abbrev-ref @{-1}`
     echo "Merge branch - $fNew"
     if [[ $fNew = "" ]] || [[ $flag_new = "invalid" ]]
           then
@@ -186,7 +207,7 @@ list_of_files()
     fi
     if [[ $flag_merge = "true" ]]
       then
-        module_list="$deleted_files1"$'\n'"$deleted_files2"$'\n'"${modified_files1}"$'\n'"${added_files1}"
+        module_list="$deleted_files1"$'\n'"$deleted_files2"$'\n'"${modified_files1}"$'\n'"${added_files1}"$'\n'"$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
     else
         module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
     fi
@@ -202,7 +223,7 @@ validate()
 
 download_tracker()
 {
-    cd $fDir &> /dev/null
+    cd $fDir$fURL &> /dev/null
     fBranch=`git rev-parse --abbrev-ref HEAD`
     cd $cur_dir &> /dev/null
     awk '{if(NR>1)print}' $cur_dir/tracker.conf > $cur_dir/temp_tracker.conf
@@ -333,14 +354,14 @@ git_add()
             git_add
         fi
     fi
-    echo -e "Do you want to add & commit all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+    echo -e "Do you want to add/stage all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
     read fFile < /dev/tty
     if [[ $fFile = "1" ]]
       then
         git add $module_list &> /dev/null
     elif [[ $fFile = "2" ]]
       then
-        echo -e "Please specify the file names below (space separated)"
+        echo -e "Please specify the file names to be staged below (space separated)"
         read module_list < /dev/tty
         git add $module_list &> /dev/null
     elif [[ $fFile = "9" ]]
@@ -358,41 +379,50 @@ git_add()
 }
 
 git_commit()
-{ 
-    if [[ $flag_merge = "true" ]]
+{
+    echo -e "List of files added / staged : $module_list \nDo you want to commit the staged files? \n\nFor Yes, Press 1\nFor No & Exit, Press 2"
+    read commit_decision < /dev/tty 
+    if [[ $commit_decision == "1" ]]
       then
-        git commit --no-edit &> /dev/null
-    else
-        printf "Commit message :\n"
-        read fCommit < /dev/tty
-        if [[ ${#fCommit} -eq 0 ]]
+        if [[ $flag_merge = "true" ]]
           then
-            echo -e "ERROR : Commit message cannot be empty!\nPlease try again."
-            git_commit
+            git commit --no-edit &> /dev/null
+        else
+            printf "Commit message :\n"
+            read fCommit < /dev/tty
+            if [[ ${#fCommit} -eq 0 ]]
+              then
+                echo -e "ERROR : Commit message cannot be empty!\nPlease try again."
+                git_commit
+            fi
+            git commit -m "$fCommit" &> /dev/null
         fi
-        git commit -m "$fCommit" &> /dev/null
+    elif [[ $commit_decision == "2" ]]
+      then
+        echo -e "Exiting as requested. Changes to be committed: $module_list"
+        rm $cur_dir/temp_push.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
+        exit
+    else
+        echo -e "ERROR : Wrong input!\nPlease try again"
+        git_commit
     fi
+
 }
 
 git_push_decide()
 {
     fBranch=`git rev-parse --abbrev-ref HEAD`
-    echo -e "SUCCESS!\nINFO : Git add & commit successful for $fBranch branch BUT not yet pushed to remote repository!\nDo you want to push the changes to remote repository? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+    echo -e "SUCCESS!\nINFO : Git add & commit successful for $fBranch branch BUT not yet pushed to remote repository!\nDo you want to push the changes to remote repository? \n\nFor Yes, Press 1\nFor No & Exit, Press 2"
     read fPush < /dev/tty
     if [[ $fPush = "1" ]]
       then
         git_push $fBranch
     elif [[ $fPush = "2" ]]
       then
-        echo -e "EXIT !\nREASON : Code push to remote repository is stopped as requested. Changes are committed locally in $fDir directory"
-        rm $cur_dir/temp_push.conf &> /dev/null
-        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
-        rm -rf $cur_dir/$dir_track_repo &> /dev/null
-        exit
-    elif [[ $fPush = "9" ]]
-      then
-        echo "Thank you! Have a nice day"
+        echo -e "EXIT !\nREASON : Code push to remote repository is stopped as requested. Changes are committed locally in $fDir$fURL directory"
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
@@ -509,6 +539,7 @@ rebase_email ()
 #git config --global credential.helper 'cache --timeout=900'
 download_tracker
 repo_dir
+repo_clone
 list_of_files
 git_add
 git_commit

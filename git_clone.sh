@@ -1,5 +1,5 @@
 #!/bin/sh
-awk '{if(NR>1)print}' clone_checkout.conf > temp_clone.conf
+awk '{if(NR>1)print}' common.conf > temp_clone.conf
 cur_dir=`pwd`
 while IFS="|"  read -r fDir fURL fBase;
 do
@@ -42,13 +42,13 @@ base_branch()
             base_branch
         fi
     else
-        echo -e "WARNING : No branch provided to checkout\nDo you want to continue?\n\nFor Yes - Press 1\nFor No - Press 2"
+        cur_branch=`git rev-parse --abbrev-ref HEAD`
+        echo -e "WARNING : No branch provided to checkout. Current branch : $cur_branch \nDo you want to checkout a different branch?\n\nFor Yes - Press 1\nFor No - Press 2"
         read fBranch < /dev/tty
-        if [[ $fBranch == "1" ]]
+        if [[ $fBranch == "2" ]]
           then
-            cur_branch=`git rev-parse --abbrev-ref HEAD`
             echo -e "INFO : No changes made as requested.\nCurrent branch : $cur_branch"
-        elif [[ $fBranch == "2" ]]
+        elif [[ $fBranch == "1" ]]
           then
             echo "Checkout branch :"
             read fBase < /dev/tty
@@ -106,7 +106,7 @@ repo_clone()
 
 dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
 
-echo -e "INFO : Review the details provided in clone_checkout.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nURL (Git repository URL) : $fURL \nBranch : $fBase\n***********************************************************************************************\n\nPress 1 for Git Clone repository : $dir_repo \nPress 2 for Git Checkout branch: $fBase \nPress 3 for Both (Git clone and checkout) \nPress 4 for Exit"
+echo -e "INFO : Review the details provided in common.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nURL (Git repository URL) : $fURL \nBranch : $fBase\n***********************************************************************************************\n\nPress 1 for Git Clone repository : $dir_repo \nPress 2 for Git Checkout branch: $fBase \nPress 3 for Both (Git clone and checkout) \nPress 4 for Exit"
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
   then
@@ -120,7 +120,7 @@ elif [[ $fResp = "2" ]]
       then
         base_branch
     else
-        echo -e "ERROR : No such directory - $fDir$dir_repo \nRECOMMENDED : Verify & update the clone_checkout.conf with right inputs and try again"
+        echo -e "ERROR : No such directory - $fDir$dir_repo \nRECOMMENDED : Verify & update the common.conf with right inputs and try again"
     fi
 elif [[ $fResp = "3" ]]
   then
@@ -129,7 +129,7 @@ elif [[ $fResp = "3" ]]
     base_branch
 elif [[ $fResp = "4" ]]
   then
-    echo -e "EXIT !\nREASON : $dir_repo repository clone or branch checkout stopped as requested.\nRECOMMENDED : Update clone_checkout.conf with the required inputs and try again"
+    echo -e "EXIT !\nREASON : $dir_repo repository clone or branch checkout stopped as requested.\nRECOMMENDED : Update common.conf with the required inputs and try again"
 else
     echo -e "ERROR : Wrong input.\nPlease try again."
     ./git_clone.sh
