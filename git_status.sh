@@ -58,6 +58,7 @@ list_of_files()
 
     if [[ $status == *"You have unmerged paths."* ]]
       then
+        flag_merge="true"
         fNew=`git rev-parse --abbrev-ref @{-1}`
         deleted_files1=`git status --porcelain | awk 'match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
         deleted_files2=`git status --porcelain | awk 'match($1, "DU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
@@ -65,24 +66,31 @@ list_of_files()
         added_files1=`git status --porcelain | awk 'match($1, "AA"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
        
         echo -e "\nINFO : You have unmerged paths while merging $fNew branch to $fBranch branch. \nRECOMMENDED : Fix conflicts and run git commit & push\n"
-        echo -e "*********************************************************\nStaged files - Changes to be committed\n*********************************************************"
+       
         staged_added_files=`git diff --name-status --staged | awk 'match($1,"A") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
         staged_modified_files=`git diff --name-status --staged | awk 'match($1,"M") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
         staged_deleted_files=`git diff --name-status --staged | awk 'match($1,"D") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+ 
+        if [[ $staged_added_files != "" ]] || [[ $staged_modified_files != "" ]] || [[ $staged_deleted_files != "" ]]
+          then
+            echo -e "*********************************************************\nStaged files - Changes to be committed\n*********************************************************"
+            staged_added_files=`git diff --name-status --staged | awk 'match($1,"A") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            staged_modified_files=`git diff --name-status --staged | awk 'match($1,"M") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            staged_deleted_files=`git diff --name-status --staged | awk 'match($1,"D") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
 
-        if [[ $staged_added_files != "" ]]
-          then
-            echo -e "Added : $staged_added_files"
+            if [[ $staged_added_files != "" ]]
+              then
+                echo -e "Added : $staged_added_files"
+            fi
+            if [[ $staged_modified_files != "" ]]
+              then
+                echo -e "Modified : $staged_modified_files"
+            fi
+            if [[ $staged_deleted_files != "" ]]
+              then
+                echo -e "Deleted : $staged_deleted_files"
+            fi
         fi
-        if [[ $staged_modified_files != "" ]]
-          then
-            echo -e "Modified : $staged_modified_files"
-        fi
-        if [[ $staged_deleted_files != "" ]]
-          then
-            echo -e "Deleted : $staged_deleted_files"
-        fi
-
         echo -e "\n*********************************************************\nUnmerged paths - Conflicted files\n*********************************************************"
 
         if [[ $deleted_files1 != "" ]]
@@ -103,7 +111,7 @@ list_of_files()
         fi
         echo -e "*********************************************************" 
     else    
-        staged_files=`git diff --name-status --staged`
+        staged_files=`git diff --name-only --staged`
         if [[ $staged_files != "" ]]
           then
             echo -e "\n*********************************************************\nStaged files - Changes to be committed\n*********************************************************"
@@ -123,6 +131,7 @@ list_of_files()
               then
                 echo -e "Deleted : $staged_deleted_files"
             fi
+            echo -e "\n(Note : To unstage the staged files - Press 1)"
         fi
 
         unstaged_files=`git diff --name-only`
@@ -145,6 +154,7 @@ list_of_files()
               then
                 echo -e "Deleted : $unstaged_deleted_files"
             fi
+            echo -e "\n(Note : To discard the changes in working directory - Press 2)"
         fi
 
         untracked_files=`git ls-files --others --exclude-standard`
@@ -153,6 +163,7 @@ list_of_files()
             echo -e "\n*********************************************************\nUntracked files\n*********************************************************"
             untracked_added_files=`git ls-files --others --exclude-standard -t | awk 'match($1,"?") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
             echo -e "Added : $untracked_added_files"
+            echo -e "\n(Note : Use Git commit & Push from main menu to include what will be committed)"
         fi
         if [[ $staged_files = "" ]] && [[ $unstaged_files = "" ]] && [[ $untracked_files = "" ]]
           then
@@ -165,9 +176,61 @@ list_of_files()
     fi
 }
 
-
+discard ()
+{
+    echo -e "Unstage the staged files - Press 1\nDiscard the changes in working directory - Press 2\nNo Changes & Exit - Press 3"
+    read fInput < /dev/tty
+    if [[ $fInput == "1" ]]
+      then
+        echo -e "Changes to be committed - " $staged_files | awk -v RS="" '{gsub (/\n/," ")}1'
+        echo -e "Specify the files to be unstaged (space separated)"
+        read fStaged < /dev/tty
+        array1=(${fStaged// / })
+        length=${#array1[@]}
+        for ((i=0;i<=$length-1;i++)); do
+            [[ $staged_files =~ (^|[[:space:]])${array1[$i]}($|[[:space:]]) ]] && flag_staged="true" || flag_staged="false"
+            if [[ $flag_staged == "true" ]]
+              then
+                git reset HEAD ${array1[$i]} &> /dev/null
+            else
+                echo -e "ERROR : Wrong input - ${array1[$i]} is not staged"
+            fi
+        done
+        list_of_files
+    elif [[ $fInput == "2" ]]
+      then
+        echo -e "Changes not staged for commit - " $unstaged_files | awk -v RS="" '{gsub (/\n/," ")}1'
+        echo -e "Specify the files for which changes to be discarded (space separated)"
+        read fUnstaged < /dev/tty
+        array2=(${fUnstaged// / })
+        length=${#array2[@]}
+        for ((i=0;i<=$length-1;i++)); do
+            [[ $unstaged_files =~ (^|[[:space:]])${array2[$i]}($|[[:space:]]) ]] && flag_unstaged="true" || flag_unstaged="false"
+            if [[ $flag_unstaged == "true" ]]
+              then
+                git checkout -- ${array2[$i]} &> /dev/null
+            else
+                echo -e "ERROR : Wrong input - ${array2[$i]} is not unstaged"
+            fi
+        done
+        list_of_files
+    elif [[ $fInput == "3" ]]
+      then
+        echo -e "Use Git commit & Push from main menu to update or include what will be committed"
+        rm $cur_dir/temp_clone.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        exit
+    else
+        echo -e "ERROR : Wrong input!\nPlease try again"
+        discard
+    fi
+}
 repo_dir
 repo_clone
 list_of_files
+if [[ $flag_merge != "true" ]]
+  then
+    discard
+fi
 done < temp_clone.conf
 rm $cur_dir/temp_clone.conf &> /dev/null
