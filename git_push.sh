@@ -109,7 +109,7 @@ list_of_files()
     fBranch=`git rev-parse --abbrev-ref HEAD`
     echo -e "Branch name : $fBranch \nINFO : Initiating code commit & push"
 
-    if [[ $status == *"You have unmerged paths."* ]]
+    if [[ $status == *"You have unmerged paths."* ]] || [[ $status == *"All conflicts fixed but you are still merging"* ]]
       then
         merge_branch
     fi
@@ -207,7 +207,7 @@ list_of_files()
     fi
     if [[ $flag_merge = "true" ]]
       then
-        module_list="$deleted_files1"$'\n'"$deleted_files2"$'\n'"${modified_files1}"$'\n'"${added_files1}"$'\n'"$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
+        module_list="$deleted_files1"$'\n'"$deleted_files2"$'\n'"$modified_files1"$'\n'"$added_files1"$'\n'"$deleted_files"$'\n'"$modified_files"$'\n'"$added_files"
     else
         module_list="$deleted_files"$'\n'"${modified_files}"$'\n'"${added_files}"
     fi
@@ -380,7 +380,8 @@ git_add()
 
 git_commit()
 {
-    echo -e "List of files added / staged : $module_list \nDo you want to commit the staged files? \n\nFor Yes, Press 1\nFor No & Exit, Press 2"
+    echo -e "List of files added / staged :" $module_list | awk -v RS="" '{gsub (/\n/," ")}1' 
+    echo -e "Do you want to commit the staged files? \n\nFor Yes, Press 1\nFor No & Exit, Press 2"
     read commit_decision < /dev/tty 
     if [[ $commit_decision == "1" ]]
       then
@@ -399,7 +400,7 @@ git_commit()
         fi
     elif [[ $commit_decision == "2" ]]
       then
-        echo -e "Exiting as requested. Changes to be committed: $module_list"
+        echo -e "Exiting as requested. Changes to be committed: " $module_list | awk -v RS="" '{gsub (/\n/," ")}1'
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
