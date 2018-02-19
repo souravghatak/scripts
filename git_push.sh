@@ -115,7 +115,7 @@ list_of_files()
     fi
     
     deleted_files=`git status --porcelain | awk '{if ($1 == "D") {print $2}}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    modified_files=`git status --porcelain | awk 'match($1, "M") || match($1, "UU") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    modified_files=`git status --porcelain | awk 'match($1, "M") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     added_files=`git status --porcelain | awk 'match($1, "?") || match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
 
     deleted_files1=`git status --porcelain | awk 'match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
@@ -185,21 +185,21 @@ list_of_files()
         exit
     else 
         echo -e "*********************************************************\nList of changed files (Deleted/Modified/Added)\n*********************************************************"
-        if [[ $deleted_files != "" ]]
+        if [[ $deleted_files != "" ]] || [[ $deleted_files1 != "" ]] || [[ $deleted_files2 != "" ]]
           then
-            echo -e "\nDeleted : $deleted_files"
+            echo -e "\nDeleted : $deleted_files $deleted_files1 $deleted_files2"
         else
             echo -e "\nDeleted: -"
         fi
-        if [[ $modified_files != "" ]]
+        if [[ $modified_files != "" ]] || [[ $modified_files1 != "" ]]
           then
-            echo -e "Modified : $modified_files" 
+            echo -e "Modified : $modified_files $modified_files1" 
         else
             echo -e "Modified: -"
         fi
-        if [[ $added_files != "" ]]
+        if [[ $added_files != "" ]] || [[ $added_files1 != "" ]]
           then
-            echo -e "Added: $added_files"
+            echo -e "Added: $added_files $added_files1"
         else
             echo -e "Added: -"
         fi
@@ -354,6 +354,9 @@ git_add()
             git_add
         fi
     fi
+    cd $cur_dir
+    ./git_status.sh
+    cd $fDir$dir_repo
     echo -e "Do you want to add/stage all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
     read fFile < /dev/tty
     if [[ $fFile = "1" ]]

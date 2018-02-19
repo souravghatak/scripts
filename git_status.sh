@@ -109,6 +109,7 @@ list_of_files()
           then
             echo -e "Added by both : $added_files1 \n(Details : Added $added_files1 by both $fBranch branch and $fNew branch)\n"
         fi
+        echo -e "\n(Note : Use Git commit & Push from main menu to mark resolution)"
         echo -e "*********************************************************" 
     else    
         staged_files=`git diff --name-only --staged`
@@ -178,13 +179,23 @@ list_of_files()
 
 discard ()
 {
-    echo -e "Unstage the staged files - Press 1\nDiscard the changes in working directory - Press 2\nNo Changes & Exit - Press 3"
+    echo -e "Unstage the staged files - Press 1\nDiscard the changes in working directory - Press 2\nNo Changes required - Press 3"
     read fInput < /dev/tty
     if [[ $fInput == "1" ]]
       then
+        if [[ $staged_files == "" ]]
+          then
+            echo -e "\nERROR : No staged files. Please re-try\n"
+            discard
+        fi
         echo -e "Changes to be committed - " $staged_files | awk -v RS="" '{gsub (/\n/," ")}1'
         echo -e "Specify the files to be unstaged (space separated)"
         read fStaged < /dev/tty
+        if [[ $fStaged == "" ]]
+          then
+            echo -e "\nERROR : Input can't be empty\n"
+            discard
+        fi
         array1=(${fStaged// / })
         length=${#array1[@]}
         for ((i=0;i<=$length-1;i++)); do
@@ -193,15 +204,26 @@ discard ()
               then
                 git reset HEAD ${array1[$i]} &> /dev/null
             else
-                echo -e "ERROR : Wrong input - ${array1[$i]} is not staged"
+                echo -e "\nERROR : Wrong input - ${array1[$i]} is not staged\n"
             fi
         done
         list_of_files
+        discard
     elif [[ $fInput == "2" ]]
       then
+        if [[ $unstaged_files == "" ]]
+          then
+            echo -e "\nERROR : No unstaged changes. Please re-try\n"
+            discard
+        fi
         echo -e "Changes not staged for commit - " $unstaged_files | awk -v RS="" '{gsub (/\n/," ")}1'
         echo -e "Specify the files for which changes to be discarded (space separated)"
         read fUnstaged < /dev/tty
+        if [[ $fUnstaged == "" ]]
+          then
+            echo -e "\nERROR : Input can't be empty\n"
+            discard
+        fi
         array2=(${fUnstaged// / })
         length=${#array2[@]}
         for ((i=0;i<=$length-1;i++)); do
@@ -210,13 +232,14 @@ discard ()
               then
                 git checkout -- ${array2[$i]} &> /dev/null
             else
-                echo -e "ERROR : Wrong input - ${array2[$i]} is not unstaged"
+                echo -e "\nERROR : Wrong input - ${array2[$i]} is not unstaged\n"
             fi
         done
         list_of_files
+        discard
     elif [[ $fInput == "3" ]]
       then
-        echo -e "Use Git commit & Push from main menu to update or include what will be committed"
+        echo -e "\nUse Git commit & Push from main menu to update or include what will be committed"
         rm $cur_dir/temp_clone.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         exit
