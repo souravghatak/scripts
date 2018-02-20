@@ -239,7 +239,7 @@ discard ()
         discard
     elif [[ $fInput == "3" ]]
       then
-        echo -e "\nUse Git commit & Push from main menu to update or include what will be committed"
+        echo -e "\nNo changes made. Use Git commit & Push from main menu to update or include what will be committed"
         rm $cur_dir/temp_clone.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         exit

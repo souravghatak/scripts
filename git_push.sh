@@ -357,7 +357,7 @@ git_add()
     cd $cur_dir
     ./git_status.sh
     cd $fDir$dir_repo
-    echo -e "Do you want to add/stage all the above files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+    echo -e "Do you want to stage(add) all the unstaged/untracked files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
     read fFile < /dev/tty
     if [[ $fFile = "1" ]]
       then
