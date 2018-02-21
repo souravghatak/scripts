@@ -246,6 +246,7 @@ merge()
     list_of_files
     if [[ $merge_var == *"CONFLICT"* ]]
       then
+        git_diff=$(git diff $fNew)
         if [[ $flag_auto != "true" ]] && [[ $healthcheck != "true" ]]
           then
             echo -e "WARNING : Merge Preview - Conflicts recorded while merging $fNew branch to $fBase branch.\nDo you want to continue merging? \n\nFor Yes, Press 1\nFor No and Exit, Press 2"
@@ -278,6 +279,7 @@ merge()
           then
             git merge --abort &> /dev/null
             rm $cur_dir/${fBase}_diff_${fNew}.txt &> /dev/null
+            echo $git_diff > $cur_dir/${fBase}_diff_${fNew}.txt
             echo -e "EXIT !\nREASON : Merge stopped as requested!\nRECOMMENDED : Please consult $cur_dir/${fBase}_diff_${fNew}.txt file for the conflicts recorded and try again."
             rm $cur_dir/temp_merge.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null

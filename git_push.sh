@@ -107,6 +107,115 @@ list_of_files()
 {
     status=$(git status)
     fBranch=`git rev-parse --abbrev-ref HEAD`
+    echo -e "\nInitiating code commit & push"
+
+    if [[ $status == *"You have unmerged paths."* ]] || [[ $status == *"All conflicts fixed but you are still merging"* ]]
+      then
+        merge_branch
+        fNew=`git rev-parse --abbrev-ref @{-1}`
+        deleted_files1=`git status --porcelain | awk 'match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        deleted_files2=`git status --porcelain | awk 'match($1, "DU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        modified_files1=`git status --porcelain | awk 'match($1, "UU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        added_files1=`git status --porcelain | awk 'match($1, "AA"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+
+        if [[ $deleted_files1 != "" ]]
+          then
+            echo -e "WARNING : Deleted $deleted_files1 from branch $fNew .\nDo you want to continue removing these files from $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+            read fDel < /dev/tty
+            if [[ $fDel = "1" ]]
+              then
+                git rm $deleted_files1 &> /dev/null
+                deleted_files+=" "$deleted_files1
+                deleted_files1=""
+            elif [[ $fDel = "2" ]]
+              then
+                echo -e "INFO : Not removing $deleted_files1 from $fBranch branch as requested."
+            elif [[ $fDel = "9" ]]
+              then
+                echo "Thank you! Have a nice day."
+                rm $cur_dir/temp_push.conf &> /dev/null
+                rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+                rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+                rm -rf $cur_dir/$dir_track_repo &> /dev/null
+                exit
+            else
+                echo -e "ERROR : Wrong input!\nPlease try again"
+                list_of_files
+            fi
+        fi
+
+        if [[ $deleted_files2 != "" ]]
+          then
+            echo -e "WARNING : Removed $deleted_files2 from branch $fBranch .\nDo you want to continue adding these files to $fBranch branch while merging $fNew branch? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+            read fDel1 < /dev/tty
+            if [[ $fDel1 = "1" ]]
+              then
+                echo -e "INFO : Adding $deleted_files2 to $fBranch branch as requested."
+                added_files+=" "$deleted_files2
+            elif [[ $fDel1 = "2" ]]
+              then
+                git rm $deleted_files2 &> /dev/null
+                deleted_files2=""
+            elif [[ $fDel = "9" ]]
+              then
+                echo "Thank you! Have a nice day."
+                rm $cur_dir/temp_push.conf &> /dev/null
+                rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+                rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+                rm -rf $cur_dir/$dir_track_repo &> /dev/null
+                exit
+            else
+                echo -e "ERROR : Wrong input!\nPlease try again"
+                list_of_files
+            fi
+        fi
+
+        staged_added_files=`git diff --name-status --staged | awk 'match($1,"A") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        staged_modified_files=`git diff --name-status --staged | awk 'match($1,"M") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        staged_deleted_files=`git diff --name-status --staged | awk 'match($1,"D") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+
+        module_list="$deleted_files1"$'\n'"$deleted_files2"$'\n'"$modified_files1"$'\n'"$added_files1"
+    else
+        staged_files=`git diff --name-only --staged`
+        if [[ $staged_files != "" ]]
+          then
+            staged_added_files=`git diff --name-status --staged | awk 'match($1,"A") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            staged_modified_files=`git diff --name-status --staged | awk 'match($1,"M") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            staged_deleted_files=`git diff --name-status --staged | awk 'match($1,"D") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        fi
+
+        unstaged_files=`git diff --name-only`
+        if [[ $unstaged_files != "" ]]
+          then
+            unstaged_added_files=`git diff --name-status | awk 'match($1,"A") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            unstaged_modified_files=`git diff --name-status | awk 'match($1,"M") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            unstaged_deleted_files=`git diff --name-status | awk 'match($1,"D") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        fi
+
+        untracked_files=`git ls-files --others --exclude-standard`
+        if [[ $untracked_files != "" ]]
+          then
+            untracked_added_files=`git ls-files --others --exclude-standard -t | awk 'match($1,"?") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+        fi
+
+        module_list="$staged_files"$'\n'"$unstaged_files"$'\n'"$untracked_files"
+
+        if [[ $staged_files = "" ]] && [[ $unstaged_files = "" ]] && [[ $untracked_files = "" ]]
+          then
+            echo -e "\nBranch name : $fBranch \nINFO : No files changed to commit. Thank you"
+            rm $cur_dir/temp_clone.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            exit
+        fi
+    fi
+}
+
+
+#dormant function
+list_of_files1()
+{
+    status=$(git status)
+    fBranch=`git rev-parse --abbrev-ref HEAD`
     echo -e "Branch name : $fBranch \nINFO : Initiating code commit & push"
 
     if [[ $status == *"You have unmerged paths."* ]] || [[ $status == *"All conflicts fixed but you are still merging"* ]]
@@ -116,7 +225,7 @@ list_of_files()
     
     deleted_files=`git status --porcelain | awk '{if ($1 == "D") {print $2}}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     modified_files=`git status --porcelain | awk 'match($1, "M") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    added_files=`git status --porcelain | awk 'match($1, "?") || match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    added_files=`git status --porcelain | awk 'match($1, "?") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
 
     deleted_files1=`git status --porcelain | awk 'match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     deleted_files2=`git status --porcelain | awk 'match($1, "DU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
@@ -357,6 +466,8 @@ git_add()
     cd $cur_dir
     ./git_status.sh
     cd $fDir$dir_repo
+
+    module_list=$module_list | awk -v RS="" '{gsub (/\n/," ")}1'
     echo -e "Do you want to stage(add) all the unstaged/untracked files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
     read fFile < /dev/tty
     if [[ $fFile = "1" ]]
@@ -365,7 +476,7 @@ git_add()
     elif [[ $fFile = "2" ]]
       then
         echo -e "Please specify the file names to be staged below (space separated)"
-        read module_list < /dev/tty
+        read module_list  < /dev/tty
         git add $module_list &> /dev/null
     elif [[ $fFile = "9" ]]
       then
@@ -378,7 +489,11 @@ git_add()
     else
         echo -e "ERROR : Wrong input!\nPlease try again"
         git_add
-    fi  
+    fi
+    if [[ $flag_merge = "true" ]]
+      then
+        module_list="$deleted_files1"$'\n'"$deleted_files2"$'\n'"$modified_files1"$'\n'"$added_files1"$'\n'"$staged_added_files"$'\n'"$staged_modified_files"$'\n'"$staged_deleted_files" 
+    fi
 }
 
 git_commit()
