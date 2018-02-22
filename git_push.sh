@@ -203,8 +203,10 @@ list_of_files()
         if [[ $staged_files = "" ]] && [[ $unstaged_files = "" ]] && [[ $untracked_files = "" ]]
           then
             echo -e "\nBranch name : $fBranch \nINFO : No files changed to commit. Thank you"
-            rm $cur_dir/temp_clone.conf &> /dev/null
+            rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
             exit
         fi
     fi
