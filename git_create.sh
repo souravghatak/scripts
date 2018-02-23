@@ -139,7 +139,7 @@ validate()
 download_tracker()
 {
     awk '{if(NR>1)print}' $cur_dir/tracker.conf > $cur_dir/temp_tracker.conf
-    while IFS="|"  read -r fTrack_URL fTrack_Path ;
+    while IFS="|"  read -r fTrack_URL tracker_path ;
     do
         if [[ $fTrack_URL = "" ]] || [[ $flag_tracker = "invalid" ]]
           then
@@ -158,18 +158,40 @@ download_tracker()
         cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
         if [ $flag_tracker == "invalid" ]
           then
-            echo -e "ERROR : Invalid URL for tracker!\nPlease try again"
+            echo -e "ERROR : Invalid URL : $fTrack_URL  for tracker!\nPlease try again"
+            download_tracker
+        fi
+
+        if [[ $flag_tracker_dir == "invalid" ]]
+          then
+            echo -e "Directory for tracker :"
+            read tracker_path < /dev/tty
+        fi
+
+        if [[ $tracker_path != "" ]]
+          then
+            tracker_path_dir=$tracker_path/
+            cd $tracker_path_dir &> /dev/null && flag_tracker_dir="valid" || flag_tracker_dir="invalid"
+            cd - 
+        else
+            flag_tracker_dir="valid"
+            tracker_path_dir=""
+        fi
+
+        if [[ $flag_tracker_dir == "invalid" ]]
+          then
+            echo -e "ERROR : Invalid directory for tracker!\nPlease try again"
             download_tracker
         fi
 
         git fetch &> /dev/null
-        git checkout origin/master -- $fTrack_Path${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
+        git checkout origin/master -- $tracker_path_dir${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
         if [ $flag_repo_tracker == "invalid" ]
           then
             echo -e "WARNING : ${dir_repo}_tracker.csv file is not available in remote repository.\nCreating new ${dir_repo}_tracker.csv file."
         else
-            mv ${dir_repo}_tracker.csv $cur_dir/
-            git reset HEAD ${dir_repo}_tracker.csv &> /dev/null
+            mv $tracker_path_dir${dir_repo}_tracker.csv $cur_dir/
+            git reset HEAD $tracker_path_dir${dir_repo}_tracker.csv &> /dev/null
         fi
     done < $cur_dir/temp_tracker.conf
     rm $cur_dir/temp_tracker.conf &> /dev/null
@@ -197,8 +219,13 @@ if [[ $fResp = "1" ]]
     paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
     
     git checkout master &> /dev/null
-    mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
-    git add ${dir_repo}_tracker.csv &> /dev/null
+    if [[ $tracker_path_dir != "" ]]
+      then
+        mv $cur_dir/${dir_repo}_tracker.csv $tracker_path_dir &> /dev/null
+    else
+        mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
+    fi
+    git add $tracker_path_dir${dir_repo}_tracker.csv &> /dev/null
     git commit -m "Created new branch : $fNew" &> /dev/null
     echo -e "INFO : Updated ${dir_repo}_tracker.csv"
     code_push master
