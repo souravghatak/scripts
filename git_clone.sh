@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 awk '{if(NR>1)print}' common.conf > temp_clone.conf
 cur_dir=`pwd`
 while IFS="|"  read -r fDir fURL fBase;

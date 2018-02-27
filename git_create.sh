@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #set -e
 awk '{if(NR>1)print}' create.conf > temp_create.conf
 cur_dir="$PWD"

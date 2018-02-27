@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 awk '{if(NR>1)print}' common.conf > temp_clone.conf
 
@@ -162,7 +162,7 @@ list_of_files()
         if [[ $untracked_files != "" ]]
           then
             echo -e "\n*********************************************************\nUntracked files\n*********************************************************"
-            untracked_added_files=`git ls-files --others --exclude-standard -t | awk 'match($1,"?") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            untracked_added_files=`git ls-files --others --exclude-standard -t | awk 'match($1,"/?") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
             echo -e "Added : $untracked_added_files"
             echo -e "\n(Note : Use Git commit & Push from main menu to include what will be committed)"
         fi

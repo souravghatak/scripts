@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 awk '{if(NR>1)print}' merge.conf > temp_merge.conf
 cur_dir=`pwd`
 while IFS="|"  read -r fDir fBase fNew fURL ;

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 awk '{if(NR>1)print}' common.conf > temp_push.conf
 cur_dir=`pwd`
@@ -195,7 +195,7 @@ list_of_files()
         untracked_files=`git ls-files --others --exclude-standard`
         if [[ $untracked_files != "" ]]
           then
-            untracked_added_files=`git ls-files --others --exclude-standard -t | awk 'match($1,"?") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            untracked_added_files=`git ls-files --others --exclude-standard -t | awk 'match($1,"/?") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
         fi
 
         module_list="$staged_files"$'\n'"$unstaged_files"$'\n'"$untracked_files"
@@ -227,7 +227,7 @@ list_of_files1()
     
     deleted_files=`git status --porcelain | awk '{if ($1 == "D") {print $2}}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     modified_files=`git status --porcelain | awk 'match($1, "M") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-    added_files=`git status --porcelain | awk 'match($1, "?") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+    added_files=`git status --porcelain | awk 'match($1, "/?") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
 
     deleted_files1=`git status --porcelain | awk 'match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
     deleted_files2=`git status --porcelain | awk 'match($1, "DU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
