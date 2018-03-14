@@ -28,9 +28,8 @@ repo_dir()
 
 download_tracker()
 {
-    cd $cur_dir
-    awk '{if(NR>1)print}' tracker.conf > temp_tracker.conf
-    while IFS="|"  read -r fTrack_URL fTrack_Path ;
+    awk '{if(NR>1)print}' $cur_dir/tracker.conf > $cur_dir/temp_tracker.conf
+    while IFS="|"  read -r fTrack_URL tracker_path ;
     do
         if [[ $fTrack_URL = "" ]] || [[ $flag_tracker = "invalid" ]]
           then
@@ -40,32 +39,53 @@ download_tracker()
         if [[ ${#fTrack_URL} -eq 0 ]]
           then
             flag_tracker="invalid"
-            echo -e "ERROR : Invalid URL!\nPlease try again"
-            download_tracker
-        fi
-        git clone $fTrack_URL &> /dev/null
-        dir_track_repo=`echo $fTrack_URL | awk -F '[/.]' '{print $(NF-1)}'`
-        cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
-        
-        if [ $flag_tracker == "invalid" ]
-          then
             echo -e "ERROR : Invalid URL for tracker!\nPlease try again"
             download_tracker
         fi
-        git fetch &> /dev/null
-        git checkout origin/master -- $fTrack_Path${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
-        if [[ $flag_repo_tracker == "invalid" ]]
+        cd $cur_dir
+        git clone $fTrack_URL &> /dev/null
+        dir_track_repo=`echo $fTrack_URL | awk -F '[/.]' '{print $(NF-1)}'`
+        cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
+        if [ $flag_tracker == "invalid" ]
           then
-            echo -e "ERROR : ${dir_repo}_tracker.csv file is not available.\nPlease try again"
+            echo -e "ERROR : Invalid URL : $fTrack_URL  for tracker!\nPlease try again"
             download_tracker
+        fi
+
+        if [[ $flag_tracker_dir == "invalid" ]]
+          then
+            echo -e "Directory for tracker :"
+            read tracker_path < /dev/tty
+        fi
+
+        if [[ $tracker_path != "" ]]
+          then
+            tracker_path_dir=$tracker_path/
+            cd $tracker_path_dir &> /dev/null && flag_tracker_dir="valid" || flag_tracker_dir="invalid"
+            cd -
         else
-            mv ${dir_repo}_tracker.csv $cur_dir/
-            git reset HEAD ${dir_repo}_tracker.csv &> /dev/null
+            flag_tracker_dir="valid"
+            tracker_path_dir=""
+        fi
+
+        if [[ $flag_tracker_dir == "invalid" ]]
+          then
+            echo -e "ERROR : Invalid directory for tracker!\nPlease try again"
+            download_tracker
+        fi
+
+        git fetch &> /dev/null
+        git checkout origin/master -- $tracker_path_dir${dir_repo}_tracker.csv &> /dev/null && flag_repo_tracker="valid" || flag_repo_tracker="invalid"
+        if [ $flag_repo_tracker == "invalid" ]
+          then
+            echo -e "WARNING : ${dir_repo}_tracker.csv file is not available in remote repository.\nCreating new ${dir_repo}_tracker.csv file."
+        else
+            mv $tracker_path_dir${dir_repo}_tracker.csv $cur_dir/
+            git reset HEAD $tracker_path_dir${dir_repo}_tracker.csv &> /dev/null
         fi
     done < $cur_dir/temp_tracker.conf
     rm $cur_dir/temp_tracker.conf &> /dev/null
 }
-
 
 base_branch()
 {
