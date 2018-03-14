@@ -107,7 +107,15 @@ list_of_files()
 {
     status=$(git status)
     fBranch=`git rev-parse --abbrev-ref HEAD`
-    echo -e "\nInitiating code commit & push"
+    local_commit=`git log origin/$fBranch..HEAD`
+    if [[ $local_commit != "" ]]
+      then
+        echo -e "WARNING : Local unpushed Git commits. Please find the details below:\n\n$local_commit"
+    fi
+    if [[ $flag_status != "true" ]] || [[ $local_commit != "" ]]
+      then
+        echo -e "\nInitiating code commit & push"
+    fi
 
     if [[ $status == *"You have unmerged paths."* ]] || [[ $status == *"All conflicts fixed but you are still merging"* ]]
       then
@@ -200,14 +208,43 @@ list_of_files()
 
         module_list="$staged_files"$'\n'"$unstaged_files"$'\n'"$untracked_files"
 
-        if [[ $staged_files = "" ]] && [[ $unstaged_files = "" ]] && [[ $untracked_files = "" ]]
+        if [[ $staged_files = ""  &&  $unstaged_files = ""  && $untracked_files = "" ]]
           then
-            echo -e "\nBranch name : $fBranch \nINFO : No files changed to commit. Thank you"
-            rm $cur_dir/temp_push.conf &> /dev/null
-            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
-            rm -rf $cur_dir/$dir_track_repo &> /dev/null
-            exit
+            if [[ $flag_status != "true" ]]
+              then
+                echo -e "\nBranch name : $fBranch \nINFO : No files changed to commit. Thank you"
+            fi
+            if [[ $local_commit != "" ]]
+              then
+                echo -e "\nWARNING : Local unpushed commits available."
+                flag_local_empty="true"
+                echo -e "Press 1 to push all the local commits to remote repository\nPress 2 to push a particular commit to remote repository\nPress 3 to Exit"
+                read fLocalCommit < /dev/tty
+                if [[ $fLocalCommit == "1" ]]
+                  then
+                    git_push $fBranch
+                elif [[ $fLocalCommit == "2" ]]
+                  then
+                    echo "Waiting ..."
+                elif [[ $fLocalCommit == "3" ]]
+                  then
+                    echo -e "EXIT : Local unpushed Git commits not pushed to remote repository as requested."
+                    rm $cur_dir/temp_push.conf &> /dev/null
+                    rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+                    rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+                    rm -rf $cur_dir/$dir_track_repo &> /dev/null
+                    exit
+                else
+                    echo -e "ERROR : Wrong input!\nPlease try again"
+                    list_of_files
+                fi 
+            else
+                rm $cur_dir/temp_push.conf &> /dev/null
+                rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+                rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+                rm -rf $cur_dir/$dir_track_repo &> /dev/null
+                exit
+            fi
         fi
     fi
 }
@@ -481,30 +518,34 @@ git_add()
     fi
     cd $cur_dir
     ./git_status.sh
+    flag_status="true"
     cd $fDir$dir_repo
-
+    list_of_files
     module_list=$module_list | awk -v RS="" '{gsub (/\n/," ")}1'
-    echo -e "Do you want to stage(add) all the unstaged/untracked files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
-    read fFile < /dev/tty
-    if [[ $fFile = "1" ]]
+    if [[ $module_list != "" ]]
       then
-        git add $module_list &> /dev/null
-    elif [[ $fFile = "2" ]]
-      then
-        echo -e "Please specify the file names to be staged below (space separated)"
-        read module_list  < /dev/tty
-        git add $module_list &> /dev/null
-    elif [[ $fFile = "9" ]]
-      then
-        echo "Thank you! Have a nice day"
-        rm $cur_dir/temp_push.conf &> /dev/null
-        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
-        rm -rf $cur_dir/$dir_track_repo &> /dev/null
-        exit
-    else
-        echo -e "ERROR : Wrong input!\nPlease try again"
-        git_add
+        echo -e "Do you want to stage(add) all the unstaged/untracked files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
+        read fFile < /dev/tty
+        if [[ $fFile = "1" ]]
+          then
+            git add $module_list &> /dev/null
+        elif [[ $fFile = "2" ]]
+          then
+            echo -e "Please specify the file names to be staged below (space separated)"
+            read module_list  < /dev/tty
+            git add $module_list &> /dev/null
+        elif [[ $fFile = "9" ]]
+          then
+            echo "Thank you! Have a nice day"
+            rm $cur_dir/temp_push.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+            rm -rf $cur_dir/$dir_track_repo &> /dev/null
+            exit
+        else
+            echo -e "ERROR : Wrong input!\nPlease try again"
+            git_add
+        fi  
     fi
     if [[ $flag_merge = "true" ]]
       then
@@ -557,7 +598,7 @@ git_push_decide()
         git_push $fBranch
     elif [[ $fPush = "2" ]]
       then
-        echo -e "EXIT !\nREASON : Code push to remote repository is stopped as requested. Changes are committed locally in $fDir$fURL directory"
+        echo -e "EXIT !\nREASON : Code push to remote repository is stopped as requested. Changes are committed locally in $fDir$dir_repo directory"
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
@@ -571,6 +612,8 @@ git_push_decide()
 
 git_push()
 {
+    #local_commit=`git log origin/ouk-sevas-12.1..HEAD`
+    #echo $local_commit 
     git push origin $1 &> /dev/null && flag_push="success" || flag_push="failed"
     branch=`echo $1`
     if [[ $flag_push = "success" ]]
@@ -676,9 +719,12 @@ download_tracker
 repo_dir
 repo_clone
 list_of_files
-git_add
-git_commit
-git_push_decide
+if [[ $flag_local_empty != "true" ]]
+  then
+    git_add
+    git_commit
+    git_push_decide
+fi
 tracker_update
 rebase_email
 
