@@ -82,7 +82,7 @@ merge_branch()
             flag_merge="true"
         elif [[ $fConflict = "2" ]]
           then
-            echo -e "EXIT !\nREASON : Merge conflicts not resolved.\nRECOMMENDED : Resolve the conflicts manually and try git commit & push."
+            echo -e "EXIT !\nREASON : As confirmed, merge conflicts not resolved.\nRECOMMENDED : Resolve the conflicts manually and try git commit & push."
             rm $cur_dir/temp_push.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
@@ -117,7 +117,7 @@ list_of_files()
         echo -e "\nInitiating code commit & push"
     fi
 
-    if [[ $status == *"You have unmerged paths."* ]] || [[ $status == *"All conflicts fixed but you are still merging"* ]]
+    if [[ $status == *"You have unmerged paths."* ]] || [[ $status == *"All conflicts fixed but you are still merging"* ]] && [[ $flag_status != "true" ]]
       then
         merge_branch
         fNew=`git rev-parse --abbrev-ref @{-1}`
@@ -522,7 +522,7 @@ git_add()
     cd $fDir$dir_repo
     list_of_files
     module_list=$module_list | awk -v RS="" '{gsub (/\n/," ")}1'
-    if [[ $module_list != "" ]]
+    if [[ $module_list != "" ]] && [[ $flag_merge = "true" || $unstaged_files != "" || $untracked_files != "" ]]
       then
         echo -e "Do you want to stage(add) all the unstaged/untracked files? \n\nFor Yes, Press 1\nFor No, Press 2\nFor Exit - Press 9"
         read fFile < /dev/tty
@@ -533,7 +533,13 @@ git_add()
           then
             echo -e "Please specify the file names to be staged below (space separated)"
             read module_list  < /dev/tty
-            git add $module_list &> /dev/null
+            if [[ $module_list == "" ]]
+              then
+                echo -e "ERROR : Input can't be empty!\nPlease try again"
+                git_add
+            else
+                git add $module_list &> /dev/null
+            fi
         elif [[ $fFile = "9" ]]
           then
             echo "Thank you! Have a nice day"
@@ -677,7 +683,8 @@ automerge ()
 }
 
 rebase_email ()
-{        
+{       
+    sys_owner_email=`awk -v var1=$branch 'BEGIN {FS = ", "}; {if ($3 == var1) {print $9}}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'` 
     if [[ $flag_merge = "true" ]]
       then
         rebase_user=`awk -v var1=$branch -v var2=$fNew -v var3="In-Production" 'BEGIN {FS = ", "}; {if ($2 == var1 && $3 != var2 && $7 != var3) {print $4}}' $cur_dir/${dir_repo}_tracker.csv | awk -v RS="" '{gsub (/\n/," ")}1'`
@@ -706,12 +713,12 @@ rebase_email ()
         length=${#array1[@]}
             
         for ((i=0;i<=$length-1;i++)); do
-            echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date . \nThe list of changed files is as below: \n\nDeleted: $remote_del \nModified: $remote_mod \nAdded: $remote_add \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
+            echo -e "Hi ${array1[$i]},\n\nBranch ${array3[$i]} created by you is baselined to $branch branch. Changes are made to $branch branch by $username ($email) for commit id: $commit at $date . \nThe list of changed files is as below: \n\nDeleted: $remote_del \nModified: $remote_mod \nAdded: $remote_add \n\nPlease rebaseline your ${array3[$i]} branch to $branch branch. \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com" | mailx -s "Rebaseline branch - ${array3[$i]} to $branch branch" -c $sys_owner_email ${array2[$i]}
         done
-        if [[ $flag_merge = "true" ]]
-          then
-            echo -e "Hi $username , \n\nYou have successfully merged $fNew branch into $branch branch for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $deleted_files \nModified: $modified_files \nAdded: $added_files \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com"
-        fi
+    fi
+    if [[ $flag_merge = "true" ]]
+      then
+        echo -e "Hi $username , \n\nYou have successfully merged $fNew branch into $branch branch for commit id: $commit at $date .\nThe list of changed files is as below: \n\nDeleted: $remote_del \nModified: $remote_mod \nAdded: $remote_add \n\n\nRegards,\nErlang L3 \nEmail ID: erlang_l3@thbs.com" | mailx -s "Merge successful - $fNew branch into $branch branch" -c $sys_owner_email $email
     fi
 }
 #git config --global credential.helper 'cache --timeout=900'
