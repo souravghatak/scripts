@@ -107,11 +107,8 @@ list_of_files()
 {
     status=$(git status)
     fBranch=`git rev-parse --abbrev-ref HEAD`
-    local_commit=`git log origin/$fBranch..HEAD`
-    if [[ $local_commit != "" ]]
-      then
-        echo -e "WARNING : Local unpushed Git commits. Please find the details below:\n\n$local_commit"
-    fi
+    local_commit=`git cherry -v origin/$fBranch`
+    
     if [[ $flag_status != "true" ]] || [[ $local_commit != "" ]]
       then
         echo -e "\nInitiating code commit & push"
@@ -212,21 +209,18 @@ list_of_files()
           then
             if [[ $flag_status != "true" ]]
               then
-                echo -e "\nBranch name : $fBranch \nINFO : No files changed to commit. Thank you"
+                echo -e "\nBranch name : $fBranch \nINFO : Everything up-to-date with remote repository."
             fi
             if [[ $local_commit != "" ]]
               then
-                echo -e "\nWARNING : Local unpushed commits available."
+                echo -e "WARNING : Local unpushed Git commits available. Please find the details below:\n\n$local_commit"
                 flag_local_empty="true"
-                echo -e "Press 1 to push all the local commits to remote repository\nPress 2 to push a particular commit to remote repository\nPress 3 to Exit"
+                echo -e "Press 1 to push all the local commits to remote repository\nPress 2 to Exit"
                 read fLocalCommit < /dev/tty
                 if [[ $fLocalCommit == "1" ]]
                   then
                     git_push $fBranch
                 elif [[ $fLocalCommit == "2" ]]
-                  then
-                    echo "Waiting ..."
-                elif [[ $fLocalCommit == "3" ]]
                   then
                     echo -e "EXIT : Local unpushed Git commits not pushed to remote repository as requested."
                     rm $cur_dir/temp_push.conf &> /dev/null
@@ -325,7 +319,7 @@ list_of_files1()
     
     if [[ $deleted_files = "" ]] && [[ $modified_files = "" ]] && [[ $added_files = "" ]]
       then
-        echo -e "EXIT !\nREASON : No files changed to commit. Thank you"
+        echo -e "EXIT !\nREASON : Everything up-to-date with remote repository."
         rm $cur_dir/temp_push.conf &> /dev/null
         rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
         rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
@@ -618,8 +612,6 @@ git_push_decide()
 
 git_push()
 {
-    #local_commit=`git log origin/ouk-sevas-12.1..HEAD`
-    #echo $local_commit 
     git push origin $1 &> /dev/null && flag_push="success" || flag_push="failed"
     branch=`echo $1`
     if [[ $flag_push = "success" ]]
@@ -745,6 +737,7 @@ else
     git commit -m "Code push to $branch branch" &> /dev/null
 fi
 flag_tracker_push="true"
+echo "Current dir - "`pwd`
 git_push master
 cd ..
 rm -rf $cur_dir/$dir_track_repo &> /dev/null

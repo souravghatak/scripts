@@ -168,7 +168,7 @@ list_of_files()
         fi
         if [[ $staged_files = "" ]] && [[ $unstaged_files = "" ]] && [[ $untracked_files = "" ]]
           then
-            echo -e "INFO : No files changed to commit. Thank you"
+            echo -e "INFO : Everything up-to-date with remote repository."
             rm $cur_dir/temp_clone.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             exit
