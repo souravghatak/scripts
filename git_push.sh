@@ -107,11 +107,35 @@ list_of_files()
 {
     status=$(git status)
     fBranch=`git rev-parse --abbrev-ref HEAD`
-    local_commit=`git cherry -v origin/$fBranch`
     
-    if [[ $flag_status != "true" ]] || [[ $local_commit != "" ]]
+    validate $fBranch && flag_remote="valid" || flag_remote="invalid"
+    
+    if [[ $flag_remote == "invalid" ]]
+      then
+        echo -e "ERROR : Branch $fBranch is a local branch and not yet pushed to remote repository.\nRECOMMENDED : Please re-create the branch using Git Automation Tool."
+        rm $cur_dir/temp_push.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
+        exit
+    fi
+    
+    local_commit=`git cherry -v origin/$fBranch | awk '{print $2}'`
+    array_local=(${local_commit// / })
+    length_local=${#array_local[@]}
+    
+    if [[ $flag_status != "true" ]]       
       then
         echo -e "\nInitiating code commit & push"
+    fi
+    
+    if [[ $local_commit != "" ]] && [[ $flag_status != "true" ]]
+      then
+        echo -e "\nWARNING : Local unpushed Git commits available. Please find the details below:"
+        for ((i=0;i<=$length_local-1;i++)); do
+            local_status=`git diff-tree --no-commit-id --name-status -r ${array_local[$i]}`
+            echo -e "\nCommit : ${array_local[$i]} \n$local_status"
+        done
     fi
 
     if [[ $status == *"You have unmerged paths."* ]] || [[ $status == *"All conflicts fixed but you are still merging"* ]] && [[ $flag_status != "true" ]]
@@ -213,9 +237,8 @@ list_of_files()
             fi
             if [[ $local_commit != "" ]]
               then
-                echo -e "WARNING : Local unpushed Git commits available. Please find the details below:\n\n$local_commit"
                 flag_local_empty="true"
-                echo -e "Press 1 to push all the local commits to remote repository\nPress 2 to Exit"
+                echo -e "\nPress 1 to push all the local commits to remote repository\nPress 2 to Exit"
                 read fLocalCommit < /dev/tty
                 if [[ $fLocalCommit == "1" ]]
                   then
@@ -737,7 +760,6 @@ else
     git commit -m "Code push to $branch branch" &> /dev/null
 fi
 flag_tracker_push="true"
-echo "Current dir - "`pwd`
 git_push master
 cd ..
 rm -rf $cur_dir/$dir_track_repo &> /dev/null

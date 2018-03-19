@@ -50,11 +50,20 @@ repo_clone()
     fi
 }
 
+validate()
+{
+    git branch -r > $cur_dir/branches.txt
+    awk '{gsub(/origin\//," ")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
+    all_branches=`sed -e "/HEAD/d" $cur_dir/branches1.txt`
+    echo $all_branches | grep -F -q -w "$1";
+}
+
 list_of_files()
 {
     status=$(git status)
     fBranch=`git rev-parse --abbrev-ref HEAD`
     echo -e "\nBranch name : $fBranch"
+    validate $fBranch && flag_remote="valid" || flag_remote="invalid"
 
     if [[ $status == *"You have unmerged paths."* ]]
       then
@@ -166,13 +175,20 @@ list_of_files()
             echo -e "Added : $untracked_added_files"
             echo -e "\n(Note : Use Git commit & Push from main menu to include what will be committed)"
         fi
+
+        if [[ $flag_remote == "invalid" ]]
+          then
+            echo -e "EXIT : Branch $fBranch is a local branch and not yet pushed to remote repository.\nRECOMMENDED : Please re-create the branch using Git Automation Tool."
+        fi
+
         if [[ $staged_files = "" ]] && [[ $unstaged_files = "" ]] && [[ $untracked_files = "" ]]
           then
-            echo -e "INFO : Everything up-to-date with remote repository."
+            echo -e "INFO : Nothing to commit, working directory clean."
             rm $cur_dir/temp_clone.conf &> /dev/null
             rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
             exit
         fi
+
         echo -e "\n*********************************************************"
     fi
 }
@@ -257,3 +273,4 @@ if [[ $flag_merge != "true" ]]
 fi
 done < temp_clone.conf
 rm $cur_dir/temp_clone.conf &> /dev/null
+rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
