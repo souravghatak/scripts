@@ -53,9 +53,8 @@ repo_clone()
 validate()
 {
     git branch -r > $cur_dir/branches.txt
-    awk '{gsub(/origin\//," ")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
-    all_branches=`sed -e "/HEAD/d" $cur_dir/branches1.txt`
-    echo $all_branches | grep -F -q -w "$1";
+    awk '{gsub(/origin\//,"\n")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
+    cat $cur_dir/branches1.txt | grep -Fxq "$1";
 }
 
 list_of_files()
@@ -74,7 +73,7 @@ list_of_files()
         modified_files1=`git status --porcelain | awk 'match($1, "UU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
         added_files1=`git status --porcelain | awk 'match($1, "AA"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
        
-        echo -e "\nINFO : You have unmerged paths while merging $fNew branch to $fBranch branch. \nRECOMMENDED : Fix conflicts and run git commit & push\n"
+        echo -e "\nINFO : You have unmerged paths while merging $fNew branch to $fBranch branch. \nRECOMMENDED : Resolve conflicts manually and do 'Git Commit & Push' from Git Automation Tool\n"
        
         staged_added_files=`git diff --name-status --staged | awk 'match($1,"A") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
         staged_modified_files=`git diff --name-status --staged | awk 'match($1,"M") {print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
@@ -178,7 +177,10 @@ list_of_files()
 
         if [[ $flag_remote == "invalid" ]]
           then
-            echo -e "EXIT : Branch $fBranch is a local branch and not yet pushed to remote repository.\nRECOMMENDED : Please re-create the branch using Git Automation Tool."
+            echo -e "\nEXIT : Branch $fBranch is a local branch and not yet pushed to remote repository.\nRECOMMENDED : Please re-create the branch using Git Automation Tool."
+            rm $cur_dir/temp_clone.conf &> /dev/null
+            rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+            exit
         fi
 
         if [[ $staged_files = "" ]] && [[ $unstaged_files = "" ]] && [[ $untracked_files = "" ]]

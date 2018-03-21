@@ -13,12 +13,12 @@ fi
 awk '{if(NR>1)print}' merge.conf > temp_merge.conf
 while IFS="|"  read -r fDir fBase fNew fURL ;
 do
+
 validate()
 {
     git branch -r > $cur_dir/branches.txt
-    awk '{gsub(/origin\//," ")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
-    all_branches=`sed -e "/HEAD/d" $cur_dir/branches1.txt`
-    echo $all_branches | grep -F -q -w "$1";
+    awk '{gsub(/origin\//,"\n")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
+    cat $cur_dir/branches1.txt | grep -Fxq "$1";
 }
 
 repo_dir()

@@ -1,10 +1,9 @@
 #!/bin/bash
-#set -e
-awk '{if(NR>1)print}' create.conf > temp_create.conf
+awk '{if(NR>1)print}' common.conf > temp_create.conf
 cur_dir="$PWD"
 email=`git config user.email`
 username=`git config user.name`
-while IFS="|"  read -r fDir fBase fNew fURL fOwner fOwner_email live;
+while IFS="|"  read -r fDir fURL;
 do
 dir_repo=""
 repo_dir()
@@ -30,11 +29,8 @@ repo_dir()
 
 base_branch()
 {
-    if [[ $fBase = "" ]] || [[ $flag = "invalid" ]]
-      then
-        echo "Base branch :"
-        read fBase < /dev/tty
-    fi
+    echo "Base branch :"
+    read fBase < /dev/tty
     validate $fBase && flag="valid" || flag="invalid"
     if [[ ${#fBase} -eq 0 ]]
       then
@@ -53,11 +49,8 @@ base_branch()
 
 live_branch()
 {
-    if [[ $live = "" ]] || [[ $flag_live = "invalid" ]]
-      then
-        echo "Live/Production branch :"
-        read live < /dev/tty
-    fi
+    echo "Live/Production branch :"
+    read live < /dev/tty
     validate $live && flag_live="valid" || flag_live="invalid"
     if [[ ${#live} -eq 0 ]]
       then
@@ -70,14 +63,10 @@ live_branch()
     fi
 }
 
-
 new_branch()
 {
-    if [[ $fNew = "" ]] || [[ $flag_new = "valid" ]]
-      then
-        echo "New branch :"
-        read fNew < /dev/tty
-    fi
+    echo "New branch :"
+    read fNew < /dev/tty
     validate $fNew && flag_new="valid" || flag_new="invalid"
     if [[ ${#fNew} -eq 0 ]]
       then
@@ -85,7 +74,7 @@ new_branch()
     fi
     if [ $flag_new = "invalid" ]
       then
-        git checkout -b $fNew &> /dev/null
+        echo
     else
         echo -e "ERROR : Branch $fNew already exists or invalid branch name.\nPlease provide a different branch name and try again"
         new_branch
@@ -103,7 +92,6 @@ code_push()
         code_push $1
     fi
 }
-
 
 repo_clone()
 {
@@ -131,9 +119,8 @@ repo_clone()
 validate() 
 { 
     git branch -r > $cur_dir/branches.txt
-    awk '{gsub(/origin\//," ")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
-    all_branches=`sed -e "/HEAD/d" $cur_dir/branches1.txt`
-    echo $all_branches | grep -F -q -w "$1";
+    awk '{gsub(/origin\//,"\n")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
+    cat $cur_dir/branches1.txt | grep -Fxq "$1";
 }
 
 download_tracker()
@@ -158,7 +145,7 @@ download_tracker()
         cd $dir_track_repo &> /dev/null && flag_tracker="valid" || flag_tracker="invalid"
         if [ $flag_tracker == "invalid" ]
           then
-            echo -e "ERROR : Invalid URL : $fTrack_URL  for tracker!\nPlease try again"
+            echo -e "ERROR : Invalid URL : $fTrack_URL for tracker!\nPlease try again"
             download_tracker
         fi
 
@@ -197,16 +184,23 @@ download_tracker()
     rm $cur_dir/temp_tracker.conf &> /dev/null
 }
 
-echo -e "INFO : Review the details provided in create.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nBase branch : $fBase \nNew Branch : $fNew \nURL (Git repository URL) : $fURL \nSystem Owner's Git Username : $fOwner \nSystem Owner's email : $fOwner_email \nProduction Branch : $live \n***********************************************************************************************\n\nDo you want to create a new branch $fNew - baselined to $fBase branch? \n\nFor Yes - Press 1\nFor No - Press 2"
+echo -e "Initiating new branch creation"
+
+repo_dir
+repo_clone
+base_branch
+new_branch
+live_branch
+
+fOwner=`awk -v var1=$dir_repo 'BEGIN {FS = "|"}; {if ($1 == var1) {print $2}}' $cur_dir/sys_owner.conf`
+fOwner_email=`awk -v var1=$dir_repo 'BEGIN {FS = "|"}; {if ($1 == var1) {print $3}}' $cur_dir/sys_owner.conf`
+
+echo -e "INFO : Review the details provided for new branch creation\n***********************************************************************************************\nDirectory for local codebase : $fDir \nBase branch : $fBase \nNew Branch : $fNew \nURL (Git repository URL) : $fURL \nSystem Owner's Git Username : $fOwner \nSystem Owner's email : $fOwner_email \nProduction Branch : $live \n***********************************************************************************************\n\nDo you want to continue creating a new branch $fNew - baselined to $fBase branch? \n\nFor Yes - Press 1\nFor No & Exit - Press 2"
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
   then
     #git config --global credential.helper 'cache --timeout=900'
-    repo_dir
-    repo_clone
-    base_branch
-    new_branch
-    live_branch
+    git checkout -b $fNew &> /dev/null
     code_push $fNew
     download_tracker
     if [ ! -f $cur_dir/${dir_repo}_tracker.csv ]
@@ -215,6 +209,7 @@ if [[ $fResp = "1" ]]
         paste -sd, excel_header >> $cur_dir/${dir_repo}_tracker.csv && rm excel_header
     fi
     date=`date "+%Y-%m-%d %H:%M:%S"`
+    
     echo $dir_repo, $fBase, $fNew, $username, $email, , "Active", $fOwner, $fOwner_email, $username, $email, $date, $live > excel_convert
     paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
     

@@ -285,9 +285,9 @@ merge()
             git merge $fNew &> /dev/null
             if [[ $flag_auto != "true" ]]
               then
-                echo -e "EXIT !\nREASON : Conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push."
+                echo -e "EXIT !\nREASON : Conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do 'Git Commit & Push' from Git Automation Tool."
             else
-                echo -e "EXIT !\nREASON : Automerge aborted as conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do git commit & push.\n"
+                echo -e "EXIT !\nREASON : Automerge aborted as conflicts recorded while merging $fNew branch to $fBase branch.\nRECOMMENDED : Resolve the conflicts manually and do 'Git Commit & Push' from Git Automation Tool.\n"
                 rm $cur_dir/temp_automerge.conf &> /dev/null
             fi
             rm $cur_dir/temp_merge.conf &> /dev/null
@@ -514,9 +514,8 @@ repo_clone()
 validate()
 {
     git branch -r > $cur_dir/branches.txt
-    awk '{gsub(/origin\//," ")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
-    all_branches=`sed -e "/HEAD/d" $cur_dir/branches1.txt`
-    echo $all_branches | grep -F -q -w "$1";
+    awk '{gsub(/origin\//,"\n")}1' $cur_dir/branches.txt > $cur_dir/branches1.txt
+    cat $cur_dir/branches1.txt | grep -Fxq "$1";
 }
 
 #dormant function - not in use
