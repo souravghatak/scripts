@@ -91,6 +91,7 @@ else
     do
       if [[ $j == "1" ]]
         then
+          echo -e "\n********************************************DISCLAIMER**********************************************\nHeathcheck will not make any changes to the local working directory or remote repository.Purpose\nof Healthcheck is to check the code base is alligned and base-lined properly based on the order\nof deployment.\n****************************************************************************************************\n"
           echo -e "INFO : Healthcheck initiated\n"
           echo -e "INFO : Review the details provided in automerge.conf\n****************************************************************************************************\nBranch names in order of deployment('|' separated) : `cat $cur_dir/temp_automerge.conf`\n****************************************************************************************************\n"
       fi
