@@ -1,7 +1,7 @@
 #!/bin/bash
 awk '{if(NR>1)print}' common.conf > temp_clone.conf
 cur_dir=`pwd`
-while IFS="|"  read -r fDir fURL fBase;
+while IFS="|"  read -r fDir fURL;
 do
 repo_dir()
 {
@@ -26,37 +26,35 @@ repo_dir()
 
 base_branch()
 {
-    if [[ $fBase != "" ]]
+    cur_branch=`git rev-parse --abbrev-ref HEAD`
+    echo -e "Current branch : $cur_branch \nDo you want to checkout a different branch?\n\nFor Yes - Press 1\nFor No - Press 2"
+    read fBranch < /dev/tty
+    if [[ $fBranch == "2" ]]
       then
-        validate $fBase && flag="valid" || flag="invalid"
-        if [[ $flag = "valid" ]]
+        echo -e "INFO : No changes made as requested.\nCurrent branch : $cur_branch"
+    elif [[ $fBranch == "1" ]]
+      then
+        echo -e "Checkout branch :"
+        read fBase < /dev/tty
+        if [[ $fBase != "" ]]
           then
-            git fetch &> /dev/null
-            git checkout $fBase &> /dev/null
-            git pull origin $fBase &> /dev/null
-            echo -e "SUCCESS!\nINFO : Checked out branch : $fBase \nCodebase directory : $fDir$dir_repo"
+            validate $fBase && flag="valid" || flag="invalid"
+            if [[ $flag = "valid" ]]
+              then
+                git fetch &> /dev/null
+                git checkout $fBase &> /dev/null
+                git pull origin $fBase &> /dev/null
+                echo -e "SUCCESS!\nINFO : Checked out branch : $fBase \nCodebase directory : $fDir$dir_repo"
+            else
+                echo -e "ERROR : Invalid branch - $fBase .\nPlease try again!"
+                base_branch
+            fi
         else
-            echo -e "ERROR : Invalid branch - $fBase .\nPlease try again!"
-            echo "Checkout branch :"
-            read fBase < /dev/tty
             base_branch
         fi
     else
-        cur_branch=`git rev-parse --abbrev-ref HEAD`
-        echo -e "WARNING : No branch provided to checkout. Current branch : $cur_branch \nDo you want to checkout a different branch?\n\nFor Yes - Press 1\nFor No - Press 2"
-        read fBranch < /dev/tty
-        if [[ $fBranch == "2" ]]
-          then
-            echo -e "INFO : No changes made as requested.\nCurrent branch : $cur_branch"
-        elif [[ $fBranch == "1" ]]
-          then
-            echo "Checkout branch :"
-            read fBase < /dev/tty
-            base_branch
-        else
-            echo -e "ERROR : Wrong input.\nPlease try again."
-            base_branch
-        fi
+        echo -e "ERROR : Wrong input.\nPlease try again."
+        base_branch
     fi
 }
 
@@ -103,14 +101,12 @@ repo_clone()
 }
 
 dir_repo=`echo $fURL | awk -F '[/.]' '{print $(NF-1)}'`
-
-echo -e "INFO : Review the details provided in common.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nURL (Git repository URL) : $fURL \nBranch : $fBase\n***********************************************************************************************\n\nPress 1 for Git Clone repository : $dir_repo \nPress 2 for Git Checkout branch: $fBase \nPress 3 for Both (Git clone and checkout) \nPress 4 for Exit"
+echo -e "INFO : Review the details provided in common.conf\n\n***********************************************************************************************\nDirectory for local codebase : $fDir \nURL (Git repository URL) : $fURL \n***********************************************************************************************\n\nPress 1 for Git Clone repository : $dir_repo \nPress 2 for Git Checkout branch \nPress 3 for Both (Git clone and checkout) \nPress 4 for Exit"
 read fResp < /dev/tty
 if [[ $fResp = "1" ]]
   then
     repo_dir
     repo_clone
-    #base_branch
 elif [[ $fResp = "2" ]]
   then
     cd $fDir$dir_repo &> /dev/null && flag_checkout="true" || flag_checkout="false"

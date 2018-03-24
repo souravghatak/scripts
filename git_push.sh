@@ -750,8 +750,14 @@ tracker_update
 rebase_email
 
 cd $cur_dir/$dir_track_repo
-mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
-git add ${dir_repo}_tracker.csv &> /dev/null
+if [[ $tracker_path_dir != "" ]]
+  then
+    mv $cur_dir/${dir_repo}_tracker.csv $tracker_path_dir &> /dev/null
+else
+    mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
+fi
+
+git add $tracker_path_dir${dir_repo}_tracker.csv &> /dev/null
 if [[ $flag_merge = "true" ]]
   then
     git commit -m "Merged $fNew branch into $branch branch" &> /dev/null

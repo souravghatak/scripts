@@ -638,10 +638,16 @@ if [[ $fResp = "1" ]]
     base_branch
     merge
     cd $cur_dir/$dir_track_repo
-    mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
+    if [[ $tracker_path_dir != "" ]]
+      then
+        mv $cur_dir/${dir_repo}_tracker.csv $tracker_path_dir &> /dev/null
+    else
+        mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
+    fi
+
     if [[ $healthcheck != "true" ]]
       then
-        git add ${dir_repo}_tracker.csv &> /dev/null
+        git add $tracker_path_dir${dir_repo}_tracker.csv &> /dev/null
         git commit -m "Merged branch $fNew into $fBase branch" &> /dev/null
         flag_tracker_push="true"
         git_push master
