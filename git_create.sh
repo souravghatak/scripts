@@ -83,13 +83,19 @@ new_branch()
 
 code_push()
 {
-    git push origin $1 &> /dev/null && flag_push="success" || flag_push="failed"
-    if [[ $flag_push = "success" ]]
-      then
-        echo         
-    else
-        echo -e "ERROR : Code push failed! Wrong git credentials!\nPlease try again"
-        code_push $1
+    retries=3
+    while ((retries > 0)); do
+        git push origin $1 &> /dev/null && break 
+        echo -e "ERROR : Code push failed! Wrong git credentials!"
+        sleep 2
+        ((retries --))
+    done
+    if ((retries == 0 )); then
+        echo -e "EXIT!\nREASON : Maximum 3 re-attempts allowed."
+        rm $cur_dir/temp_create.conf &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        exit 1
     fi
 }
 
@@ -184,6 +190,35 @@ download_tracker()
     rm $cur_dir/temp_tracker.conf &> /dev/null
 }
 
+tracker_update ()
+{
+    download_tracker
+    if [ ! -f $cur_dir/${dir_repo}_tracker.csv ]
+      then
+        echo "Repository name","Base Branch","New Branch","Created By","Branch Owner's Email address","Commit Id & Changed files, Status", "System Owner Git username", "System Owner's Email address", "Last Updated By", "Last Updated Email address", "Last Updated time", "Live Branch" > excel_header
+        paste -sd, excel_header >> $cur_dir/${dir_repo}_tracker.csv && rm excel_header
+    fi
+    date=`date "+%Y-%m-%d %H:%M:%S"`
+
+    echo $dir_repo, $fBase, $fNew, $username, $email, , "Active", $fOwner, $fOwner_email, $username, $email, $date, $live > excel_convert
+    paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
+
+    git checkout master &> /dev/null
+    if [[ $tracker_path_dir != "" ]]
+      then
+        mv $cur_dir/${dir_repo}_tracker.csv $tracker_path_dir &> /dev/null
+    else
+        mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
+    fi
+    git add $tracker_path_dir${dir_repo}_tracker.csv &> /dev/null
+    git commit -m "Created new branch : $fNew" &> /dev/null
+    echo -e "INFO : Updated ${dir_repo}_tracker.csv"
+    code_push master
+    cd ..
+    rm -rf $cur_dir/$dir_track_repo
+    rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+}
+
 echo -e "Initiating new branch creation"
 
 repo_dir
@@ -201,33 +236,7 @@ if [[ $fResp = "1" ]]
   then
     #git config --global credential.helper 'cache --timeout=900'
     git checkout -b $fNew &> /dev/null
-    code_push $fNew
-    download_tracker
-    if [ ! -f $cur_dir/${dir_repo}_tracker.csv ]
-      then
-        echo "Repository name","Base Branch","New Branch","Created By","Branch Owner's Email address","Commit Id & Changed files, Status", "System Owner Git username", "System Owner's Email address", "Last Updated By", "Last Updated Email address", "Last Updated time", "Live Branch" > excel_header
-        paste -sd, excel_header >> $cur_dir/${dir_repo}_tracker.csv && rm excel_header
-    fi
-    date=`date "+%Y-%m-%d %H:%M:%S"`
-    
-    echo $dir_repo, $fBase, $fNew, $username, $email, , "Active", $fOwner, $fOwner_email, $username, $email, $date, $live > excel_convert
-    paste -sd, excel_convert >> $cur_dir/${dir_repo}_tracker.csv && rm excel_convert
-    
-    git checkout master &> /dev/null
-    if [[ $tracker_path_dir != "" ]]
-      then
-        mv $cur_dir/${dir_repo}_tracker.csv $tracker_path_dir &> /dev/null
-    else
-        mv $cur_dir/${dir_repo}_tracker.csv . &> /dev/null
-    fi
-    git add $tracker_path_dir${dir_repo}_tracker.csv &> /dev/null
-    git commit -m "Created new branch : $fNew" &> /dev/null
-    echo -e "INFO : Updated ${dir_repo}_tracker.csv"
-    code_push master
-    cd ..
-    rm -rf $cur_dir/$dir_track_repo
-    rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
-    
+    code_push $fNew && tracker_update
     echo -e "SUCCESS!\nINFO : New branch : $fNew created successfully and baselined to : $fBase branch"
 elif [[ $fResp = "2" ]]
   then

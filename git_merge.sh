@@ -459,31 +459,42 @@ merge()
 
 code_push()
 {
-    git push origin $fBase &> /dev/null && flag_merge="success" || flag_merge="failed"
-    if [[ $flag_merge = "success" ]]
-      then
-        echo -e "SUCCESS!\nINFO : $fNew branch is merged to $fBase branch and pushed to remote repository"
-        updated_email=`git config user.email`
-        updated_username=`git config user.name`
-        commit_details=`git rev-parse --verify $fBase`
-        
-        deleted_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "D") || match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-        modified_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "M") || match($1, "UU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-        added_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "?") || match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
-        if [[ $flag_live = "false" ]]
-          then
-            `awk -v var1=$fBase -v var2="$commit_details" -v var3=$fNew -v var4="$deleted_files" -v var5="$modified_files" -v var9="$added_files" -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Merge Commit (" var3 " -> " var1 ") - Id: " var2 " - Deleted: " var4 " Modified: " var5 " Added: " var9; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/${dir_repo}_tracker.csv >> $cur_dir/${dir_repo}_tracker1.csv` &> /dev/null
-            mv $cur_dir/${dir_repo}_tracker1.csv $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+    retries=3
+    while ((retries > 0)); do
+        if git push origin $fBase &> /dev/null ; then 
+            echo -e "SUCCESS!\nINFO : $fNew branch is merged to $fBase branch and pushed to remote repository"
+            updated_email=`git config user.email`
+            updated_username=`git config user.name`
+            commit_details=`git rev-parse --verify $fBase`
+            
+            deleted_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "D") || match($1, "UD"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            modified_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "M") || match($1, "UU"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            added_files=`git diff --name-status HEAD@{1} HEAD@{0} | awk 'match($1, "?") || match($1, "A"){print $2}' | awk -v RS="" '{gsub (/\n/," ")}1'`
+            if [[ $flag_live = "false" ]]
+              then
+                `awk -v var1=$fBase -v var2="$commit_details" -v var3=$fNew -v var4="$deleted_files" -v var5="$modified_files" -v var9="$added_files" -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Merge Commit (" var3 " -> " var1 ") - Id: " var2 " - Deleted: " var4 " Modified: " var5 " Added: " var9; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/${dir_repo}_tracker.csv >> $cur_dir/${dir_repo}_tracker1.csv` &> /dev/null
+                mv $cur_dir/${dir_repo}_tracker1.csv $cur_dir/${dir_repo}_tracker.csv &> /dev/null
  
-            rebase_email $fBase
+                rebase_email $fBase
+            else
+                `awk -v var1=$fNew -v var2="$commit_details" -v var3=$fBase -v var4="$deleted_files" -v var5="$modified_files" -v var9="$added_files" -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Merge Commit (" var1 " -> " var3 ") - Id: " var2 " - Deleted: " var4 " Modified: " var5 " Added: " var9; $7 = "In-Production"; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/${dir_repo}_tracker.csv >> $cur_dir/${dir_repo}_tracker1.csv` &> /dev/null
+                mv $cur_dir/${dir_repo}_tracker1.csv $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+                rebase_email $fBase
+            fi
+            break
         else
-            `awk -v var1=$fNew -v var2="$commit_details" -v var3=$fBase -v var4="$deleted_files" -v var5="$modified_files" -v var9="$added_files" -v var6=$updated_email -v var7=$updated_username -v var8="$(date "+%Y-%m-%d %H:%M:%S")" 'BEGIN {FS = ", "} {OFS = ", "}; {if ($3 == var1) {$6 = $6 "  Merge Commit (" var1 " -> " var3 ") - Id: " var2 " - Deleted: " var4 " Modified: " var5 " Added: " var9; $7 = "In-Production"; $10 = var7; $11 = var6; $12 = var8};  print}' $cur_dir/${dir_repo}_tracker.csv >> $cur_dir/${dir_repo}_tracker1.csv` &> /dev/null
-            mv $cur_dir/${dir_repo}_tracker1.csv $cur_dir/${dir_repo}_tracker.csv &> /dev/null
-            rebase_email $fBase
+            echo -e "ERROR : Code push failed! Wrong git credentials!"
+            sleep 2
+            ((retries --))
         fi
-    else
-        echo -e "ERROR : Code push failed! Wrong git credentials!\nPlease try again"
-        code_push
+    done
+    if ((retries == 0 )); then
+        echo -e "EXIT!\nREASON : Maximum 3 re-attempts allowed."
+        rm $cur_dir/temp_merge.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        exit 1
     fi
 }
 
@@ -569,22 +580,29 @@ rebase_email ()
 
 git_push()
 {
-    git push origin $1 &> /dev/null && flag_push="success" || flag_push="failed"
-    branch=`echo $1`
-    if [[ $flag_push = "success" ]]
-      then
-        if [[ $flag_tracker_push = "true" ]]
-          then
-            if [[ $merge_var != *"Already up-to-date"* ]]
+    retries=3
+    while ((retries > 0)); do
+        if git push origin $1 &> /dev/null ; then
+            branch=`echo $1`
+            if [[ $flag_tracker_push = "true" ]]
               then
-                echo -e "INFO : Updated ${dir_repo}_tracker.csv"
+                if [[ $merge_var != *"Already up-to-date"* ]]
+                  then
+                    echo -e "INFO : Updated ${dir_repo}_tracker.csv"
+                fi
+            else
+                echo -e "SUCCESS!\nINFO : Changes pushed to remote $branch branch!"
             fi
+            break
         else
-            echo -e "SUCCESS!\nINFO : Changes pushed to remote $branch branch!"
+            echo -e "ERROR : Code push failed! Wrong git credentials!"
+            sleep 2
+            ((retries --))
         fi
-    else
-        echo -e "ERROR : Code push failed! Wrong git credentials!\nPlease try again"
-        git_push $branch
+    done
+    if ((retries == 0 )); then
+        echo -e "EXIT!\nREASON : Maximum 3 re-attempts allowed."
+        exit 1
     fi
 }
 automerge ()

@@ -634,19 +634,30 @@ git_push_decide()
 
 git_push()
 {
-    git push origin $1 &> /dev/null && flag_push="success" || flag_push="failed"
-    branch=`echo $1`
-    if [[ $flag_push = "success" ]]
-      then
-        if [[ $flag_tracker_push = "true" ]]
-          then
-            echo -e "INFO : Updated ${dir_repo}_tracker.csv" 
+    retries=3
+    while ((retries > 0)); do
+        if git push origin $1 &> /dev/null ; then
+            branch=`echo $1`
+            if [[ $flag_tracker_push = "true" ]]
+              then
+                echo -e "INFO : Updated ${dir_repo}_tracker.csv" 
+            else
+                echo -e "SUCCESS!\nINFO : Changes pushed to remote $branch branch!"
+            fi
+            break
         else
-            echo -e "SUCCESS!\nINFO : Changes pushed to remote $branch branch!"
+            echo -e "ERROR : Code push failed! Wrong git credentials!"
+            sleep 2
+            ((retries --))
         fi
-    else
-        echo -e "ERROR : Code push failed! Wrong git credentials! \nPlease try again"
-        git_push $branch
+    done
+    if ((retries == 0 )); then
+        echo -e "EXIT!\nREASON : Maximum 3 re-attempts allowed."
+        rm $cur_dir/temp_push.conf &> /dev/null
+        rm $cur_dir/branches.txt $cur_dir/branches1.txt &> /dev/null
+        rm $cur_dir/${dir_repo}_tracker.csv &> /dev/null
+        rm -rf $cur_dir/$dir_track_repo &> /dev/null
+        exit 1
     fi
 }
 
